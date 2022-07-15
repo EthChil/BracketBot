@@ -138,6 +138,7 @@ class I2CObject():
 class SPIObject():
     def __init__(self, bus, device, logger, maxSpeed=1000000, mode=0b11, wordSize=32):
         self.bus = spidev.SpiDev()
+        self.log = logger
 
         try:
             self.bus.open(bus, device)
