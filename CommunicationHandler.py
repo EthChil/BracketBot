@@ -112,7 +112,7 @@ class I2CObject():
         try:
             b = self.bus.read_byte_data(address, 0)
         except:
-            self.log.pr("Failed to read byte from address " + address)
+            self.log.pr("Failed to read byte from address " + str(address))
             return -1
 
         return b
@@ -130,7 +130,7 @@ class I2CObject():
             self.bus.write_byte_data(address, 0, data)
             return True
         except:
-            self.log.pr("Failed to write byte " + data + " to address " + address)
+            self.log.pr("Failed to write byte " + str(data) + " to address " + str(address))
             return False
 
 class SPIObject():
@@ -141,7 +141,7 @@ class SPIObject():
         try:
             self.bus.open(bus, device)
         except:
-            self.log.pr("Failed to open spi dev" + bus + "." + device)
+            self.log.pr("Failed to open spi dev" + str(bus) + "." + str(device))
 
         self.bus.max_speed_hz = maxSpeed
         self.bus.mode = mode
@@ -149,13 +149,13 @@ class SPIObject():
 
     def readByte(self, address):
         if(address > 127):
-            self.log.pr("ERROR: Invalid read address for SPI " + address)
+            self.log.pr("ERROR: Invalid read address for SPI " + str(address))
             return False
 
         try:
-            readData = self.bus.xfer(address << self.word)
+            readData = self.bus.xfer([address << self.word])
         except:
-            self.log.pr("ERROR: Failed to read from SPI " + address)
+            self.log.pr("ERROR: Failed to read from SPI " + str(address))
             return False
 
 
@@ -164,17 +164,17 @@ class SPIObject():
 
     def writeByte(self, address, data):
         if (address > 127):
-            self.log.pr("ERROR: Invalid write address for SPI " + address)
+            self.log.pr("ERROR: Invalid write address for SPI " + str(address))
             return False
 
         if (data > (math.pow(2, self.word)-1)):
-            self.log.pr("ERROR: Invalid write data for SPI " + data)
+            self.log.pr("ERROR: Invalid write data for SPI " + str(data))
             return False
 
         try:
-            self.bus.xfer(((0b10000000 + address) << self.word) + data)
+            self.bus.xfer([((0b10000000 + address) << self.word) + data])
         except:
-            self.log.pr("ERROR: Failed to read from SPI " + address)
+            self.log.pr("ERROR: Failed to read from SPI " + str(address))
             return False
         return True
 
