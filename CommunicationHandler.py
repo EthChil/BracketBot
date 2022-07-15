@@ -136,14 +136,14 @@ class I2CObject():
 class SPIObject():
     def __init__(self, bus, device, logger, maxSpeed=500000, mode=0b11, wordSize=32):
         self.bus = spidev.SpiDev()
-        self.bus.max_speed_hz = maxSpeed
-        self.bus.mode = mode
-        self.word = wordSize
-
         self.log = logger
 
         try:
             self.bus.open(bus, device)
+
+            self.bus.max_speed_hz = maxSpeed
+            self.bus.mode = mode
+            self.word = wordSize
         except:
             self.log.pr("Failed to open spi dev" + str(bus) + "." + str(device))
 
