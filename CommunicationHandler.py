@@ -104,9 +104,7 @@ class I2CObject():
             bus.pec = 1 #enable packet error checking
         except:
             self.log.pr("Failed to open I2C SMBus on port " + str(bus))
-            return False
 
-        return True
 
     def readByte(self, address):
         if(address > self.maxAddr):
@@ -145,13 +143,10 @@ class SPIObject():
             self.bus.open(bus, device)
         except:
             self.log.pr("Failed to open spi dev" + bus + "." + device)
-            return False
 
         self.bus.max_speed_hz = maxSpeed
         self.bus.mode = mode
         self.word = wordSize
-
-        return True
 
     def readByte(self, address):
         if(address > 127):
@@ -164,7 +159,7 @@ class SPIObject():
             self.log.pr("ERROR: Failed to read from SPI " + address)
             return False
 
-        
+
         return readData
 
 
@@ -183,6 +178,9 @@ class SPIObject():
             self.log.pr("ERROR: Failed to read from SPI " + address)
             return False
         return True
+
+    def close(self):
+        self.bus.close()
 
 
 
