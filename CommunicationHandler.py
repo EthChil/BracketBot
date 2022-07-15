@@ -1,10 +1,10 @@
 import math
 
-from smbus2 imoprt SMBus
+from smbus2 import SMBus
 import datetime
 import spidev
 
-maxI2CBusses = 2
+#maxI2CBusses = 2
 
 #Notes on jetson hardware
 #| PIN | Function |
@@ -88,6 +88,8 @@ class logger():
         self.log.close()
 
 class I2CObject():
+    maxI2CBusses = 2
+
     def __init__(self, bus, logger, maxAddress=106, maxData=255):
         self.log = logger
         self.maxAddr = maxAddress
