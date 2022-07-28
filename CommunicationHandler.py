@@ -88,10 +88,11 @@ class logger():
         self.log.close()
 
 class I2CObject():
-    def __init__(self, bus, logger, maxAddress=106, maxData=255):
+    def __init__(self, bus, chipAdd, logger, maxAddress=106, maxData=255):
         self.log = logger
         self.maxAddr = maxAddress
         self.maxData = maxData
+        self.chipAdd = chipAdd
 
         if(bus > maxI2CBusses or bus < 0):
             print("Error attempting to access I2C bus out of range")
@@ -99,26 +100,26 @@ class I2CObject():
         #open SMBus object
         try:
             self.bus = SMBus(bus)
-            bus.pec = 1 #enable packet error checking
+            self.bus.pec = 1 #enable packet error checking
         except:
             self.log.pr("Failed to open I2C SMBus on port " + str(bus))
 
 
-    def readByte(self, address):
-        if(address > self.maxAddr):
+    def readByte(self, offset):
+        if(offset > self.maxAddr):
             self.log.pr("MAX ADDRESS EXCEEDED")
             return -1
 
         try:
-            b = self.bus.read_byte_data(address, 0)
+            b = self.bus.read_byte_data(self.chipAdd, offset)
         except:
-            self.log.pr("Failed to read byte from address " + str(address))
+            self.log.pr("Failed to read byte from address " + str(offset))
             return -1
 
         return b
 
-    def writeByte(self, address, data):
-        if(address > self.maxAddr):
+    def writeByte(self, offset, data):
+        if(offset > self.maxAddr):
             self.log.pr("MAX ADDRESS EXCEEDED")
             return False
 
@@ -127,10 +128,10 @@ class I2CObject():
             return False
 
         try:
-            self.bus.write_byte_data(address, 0, data)
+            self.bus.write_byte_data(self.address, offset, data)
             return True
         except:
-            self.log.pr("Failed to write byte " + str(data) + " to address " + str(address))
+            self.log.pr("Failed to write byte " + str(data) + " to address " + str(offset))
             return False
 
 class SPIObject():
