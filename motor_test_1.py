@@ -17,7 +17,6 @@ spi6100.writeByte(0x0A, data)
 spi6100.writeByte(0x19, [00,00,40,40])
 
 # Run motor
-
 spi4671.writeByte(0x1B, [0,3,0,15])
 spi4671.writeByte(0x17, [0,0,0,0]) 
 spi4671.writeByte(0x18, [0,0,15,159])
