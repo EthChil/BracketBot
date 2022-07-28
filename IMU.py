@@ -3,7 +3,7 @@ import time
 
 log = comm.logger()
 
-IMU = comm.I2CObject(0,log)
+IMU = comm.I2CObject(0,40,log)
 
 print(IMU.readByte(40))
 
