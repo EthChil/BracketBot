@@ -21,7 +21,7 @@ def setupIMU():
     time.sleep(0.03)
 
     #write power mode in PWR_MODE
-    IMU.writeByte(int("3E", 16), int("00", 16))
+    IMU.writeByte(int("3E", 16), 0)
 
 
     #write RST_SYS in SYS_TRIGGER

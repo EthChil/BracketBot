@@ -128,7 +128,7 @@ class I2CObject():
             return False
 
         try:
-            self.bus.write_byte_data(self.address, offset, data)
+            self.bus.write_byte_data(self.chipAdd, offset, data)
             return True
         except:
             self.log.pr("Failed to write byte " + str(data) + " to address " + str(offset))
