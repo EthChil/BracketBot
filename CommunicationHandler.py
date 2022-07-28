@@ -100,7 +100,7 @@ class I2CObject():
         #open SMBus object
         try:
             self.bus = SMBus(bus)
-            self.bus.pec = 1 #enable packet error checking
+            #self.bus.pec = 1 #enable packet error checking
         except:
             self.log.pr("Failed to open I2C SMBus on port " + str(bus))
 
