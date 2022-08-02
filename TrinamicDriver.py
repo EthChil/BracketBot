@@ -21,6 +21,16 @@ class trinamicDriver():
 
 
     # Initial Setup
+    def initTMCfromFile(self, filename):
+        setupFile = open(filename, 'r')
+
+        for line in setupFile:
+            data = line.split(',')
+            intArr = [int(numeric_string) for numeric_string in data]
+            print(intArr[0], intArr[1:])
+            self.spi4671.writeByte(intArr[0], intArr[1:])
+
+
     def initTMC(self):
         #setting GSTAT on 6100 to 0xFFFFFFFF to clear flags
         self.spi6100.writeByte(0x01, [255,255,255,255])
@@ -121,7 +131,7 @@ class trinamicDriver():
 
         result = list(torqueTarget.to_bytes(2, 'big', signed=True))
 
-        #Rotate motor
+        #Rotate motor1
         self.spi4671.writeByte(0x64, result + [0, 0])
 
     def stopMotor(self):
