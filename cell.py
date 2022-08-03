@@ -5,7 +5,7 @@ import time
 c = comm.logger()
 driver = t.trinamicDriver(1,1,0,'TrinamicConfig/parsedConfig.txt', c)
 
-driver.rotateMotorOpenloop(750)
+driver.rotateMotorTorque(750)
 time.sleep(3)
 driver.stopMotor()
 time.sleep(3)
