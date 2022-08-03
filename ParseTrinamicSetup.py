@@ -34,15 +34,4 @@ output.close()
 setupFile.close()
 mappingFile.close()
 
-setupFile = open("TrinamicConfig/parsedConfig.txt", 'r')
 
-for line in setupFile:
-
-    if("wait" in line):
-        time.sleep(3)
-        continue
-
-    data = line.split(',')
-    intArr = [int(numeric_string) for numeric_string in data]
-    print(intArr[0], intArr[1:])
-    #self.spi4671.writeByte(intArr[0], intArr[1:])

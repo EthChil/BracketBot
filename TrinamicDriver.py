@@ -9,25 +9,24 @@ def twosComp(val, bits):
 
 
 class trinamicDriver():
-    def __init__(self, bus, device4671, device6100, log):
+    def __init__(self, bus, device4671, device6100, setupFile, log):
         self.spi4671 = comm.SPIObject(bus, device4671, log)
         self.spi6100 = comm.SPIObject(bus, device6100, log)
 
-        self.initTMC()
-        self.setupMotor()
-        self.setupADC()
-        self.setupPIDConstants()
-        self.setupEncoder()
-
+        self.initTMCfromFile(setupFile)
 
     # Initial Setup
     def initTMCfromFile(self, filename):
         setupFile = open(filename, 'r')
 
         for line in setupFile:
+            if("wait" in line):
+                time.sleep(1)
+                continue
+
             data = line.split(',')
             intArr = [int(numeric_string) for numeric_string in data]
-            print(intArr[0], intArr[1:])
+            print(intArr)
             self.spi4671.writeByte(intArr[0], intArr[1:])
 
 
@@ -124,7 +123,7 @@ class trinamicDriver():
         #Set PI constant for Flux control
         self.spi4671.writeByte(0x54, [1,0,1,0])
 
-    #torque is in Nm?
+    #torque is in ??? (-_-)
     def rotateMotorOpenloop(self, torqueTarget):
         # Switch to torque mode in motion mode
         self.spi4671.writeByte(0x63, [0, 0, 0, 1])
@@ -133,10 +132,28 @@ class trinamicDriver():
 
         #Rotate motor1
         self.spi4671.writeByte(0x64, result + [0, 0])
+    
+    def rotateMotorVelocity(self, velocityTarget):
+        self.spi4671.writeByte(0x63, [0,0,0,2])
 
+        result = list(velocityTarget.to_bytes(4, 'big', signed=True))
+
+        self.spi4671.writeByte(0x66, result)
+    
+    def rotateMotorPosition(self, positionTarget):
+        self.spi4671.writeByte(0x63, [0,0,0,3])
+
+        result = list(positionTarget.to_bytes(4, 'big', signed=True))
+
+        self.spi4671.writeBytes(0x68, result)
+        
     def stopMotor(self):
         #Set torque target to 0
-        self.spi4671.writeByte(0x64, [0, 0, 0, 0])
+        self.spi4671.writeByte(0x68, [0,0,0,0])
+        self.spi4671.writeByte(0x66, [0,0,0,0])
+        self.spi4671.writeByte(0x64, [0,0,0,0])
+        time.sleep(2)
+        self.spi4671.writeByte(0x63, [0,0,0,0])
 
 
 

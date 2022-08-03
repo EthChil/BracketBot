@@ -156,7 +156,7 @@ class SPIObject():
             return False
 
         try:
-            readData = self.bus.xfer([address << self.word])
+            readData = self.bus.xfer2([address, 00, 00, 00, 00])
         except:
             self.log.pr("ERROR: Failed to read from SPI " + str(address))
             return False
@@ -173,9 +173,9 @@ class SPIObject():
         # if (data > (math.pow(2, self.word)-1)):
         #     self.log.pr("ERROR: Invalid write data for SPI " + str(data))
         #     return False
-
+        print([0b10000000 + address] + data)
         try:
-            self.bus.xfer([((0b10000000 + address) << self.word)].append(data))
+            self.bus.xfer2([0b10000000 + address] + data)
         except:
             self.log.pr("ERROR: Failed to read from SPI " + str(address))
             return False
