@@ -92,9 +92,9 @@ class trinamicDriver():
         self.spi4671.writeByte(0x26, [0,0,32,0])
 
         #ABN decoder count
-        self.spi4671.writeByte(0x27, [0,0,13,210])
+        self.spi4671.writeByte(0x27, [0,0,31,98])#1F62
 
-        #Encoder PHI M offset (if the shaft slips this needs to be retuned)
+        #Encoder PHI M offset 
         self.spi4671.writeByte(0x29, [0,0,0,0])
 
         # Init encoder (mode 0)
@@ -124,7 +124,7 @@ class trinamicDriver():
         self.spi4671.writeByte(0x54, [1,0,1,0])
 
     #torque is in ??? (-_-)
-    def rotateMotorOpenloop(self, torqueTarget):
+    def rotateMotorTorque(self, torqueTarget):
         # Switch to torque mode in motion mode
         self.spi4671.writeByte(0x63, [0, 0, 0, 1])
 

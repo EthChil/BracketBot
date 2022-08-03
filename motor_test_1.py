@@ -3,8 +3,8 @@ import time
 
 log = comm.logger()
 
-spi4671 = comm.SPIObject(1,1,log)
-spi6100 = comm.SPIObject(1,0,log)
+spi4671 = comm.SPIObject(0,0,log)
+spi6100 = comm.SPIObject(0,1,log)
 
 # Initial Setup
 spi6100.writeByte(0x01, [255,255,255,255])
@@ -35,7 +35,7 @@ spi4671.writeByte(0x08, [1,0,129,165])
 # ABN encoder settings
 spi4671.writeByte(0x25, [0,0,16,0])
 spi4671.writeByte(0x26, [0,0,32,0])
-spi4671.writeByte(0x27, [0,0,13,210])
+#spi4671.writeByte(0x27, [0,0,31,98])
 spi4671.writeByte(0x29, [0,0,0,0])
 
 # Limits

@@ -115,7 +115,7 @@ class I2CObject():
         except:
             self.log.pr("Failed to read byte from address " + str(offset))
             return -1
-
+        
         return b
 
     def writeByte(self, offset, data):
@@ -148,20 +148,19 @@ class SPIObject():
         except:
             self.log.pr("Failed to open spi dev" + str(bus) + "." + str(device))
 
-
-
     def readByte(self, address):
         if(address > 127):
             self.log.pr("ERROR: Invalid read address for SPI " + str(address))
             return False
 
         try:
-            readData = self.bus.xfer2([address, 00, 00, 00, 00])
+            #print([address,00,00,00,00])
+            readData = self.bus.xfer2([address,00,00,00,00])
         except:
             self.log.pr("ERROR: Failed to read from SPI " + str(address))
             return False
 
-
+        print(readData)
         return readData
 
 
@@ -173,7 +172,7 @@ class SPIObject():
         # if (data > (math.pow(2, self.word)-1)):
         #     self.log.pr("ERROR: Invalid write data for SPI " + str(data))
         #     return False
-        print([0b10000000 + address] + data)
+        #print([0b10000000 + address] + data)
         try:
             self.bus.xfer2([0b10000000 + address] + data)
         except:

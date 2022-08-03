@@ -2,23 +2,24 @@ import CommunicationHandler as comm
 
 log = comm.logger()
 
+bus = input("enter spibus number (0 - LEFT) or (1 - RIGHT):")
 device = input("enter device number (1 - 4671) or (0 - 6100):")
-spi = comm.SPIObject(1,int(device),log,mode=0b11)
+spi = comm.SPIObject(int(bus),int(device),log,mode=0b11)
 
 
 while(True):        
-    add = input("adress to write in hex EX. 0x0A:")
+    add = input("address to write in hex EX. 0x0A:")
     opp = input("Read (R) or Write (W):")
 
     if(opp == 'R'):
         retDat = spi.readByte(int(add, 16))
         print("bit range, hex,  ASCII")
-        ctr = 3
+        ctr = 4
         for item in retDat:
             print((str((ctr*8) + 7) + "->" + str(ctr*8)).ljust(9) + "  " + hex(item) + "  " + chr(item))
             ctr -= 1
     else:
-        data = input("data to write (31->0) EX. 12345678")
+        data = input("data to write (31->0) EX. 12345678:")
         dataArr = []
         for i in range(4):
             #print(i)

@@ -5,7 +5,7 @@ log = comm.logger()
 
 IMU = comm.I2CObject(0,40,log)
 
-print(IMU.readByte(40))
+print(IMU.readByte(0))
 
 setup = 0
 
@@ -19,23 +19,34 @@ def setupIMU():
 
     #mode information
     #NDOF mode - sensor fusion mode which allows us to access the gravity vector
-
+    time.sleep(1)
     #write RST_SYS in SYS_TRIGGER
-    IMU.writeByte(int("3F", 16), int("20", 16))
+    IMU.writeByte(0x3F, 0x20)
+    time.sleep(1)
+    print("0x3f 20")
+    print(IMU.readByte(0x3F))
 
-    time.sleep(0.03)
+    time.sleep(0.75)
 
     #write power mode in PWR_MODE
-    IMU.writeByte(int("3E", 16), 0)
-
+    IMU.writeByte(0x3E, 0x00)
+    time.sleep(1)
+    print("0x3e 00")
+    print(IMU.readByte(0x3E))
 
     #write RST_SYS in SYS_TRIGGER
-    IMU.writeByte(int("3F", 16), int("00", 16))
+    IMU.writeByte(0x3F, 0x00)
+    time.sleep(1)
+    print("0x3f 00")
+    print(IMU.readByte(0x3F))
 
     time.sleep(0.03)
 
     #Set operation mode in OPR_MODE (this should be NDOF)
-    IMU.writeByte(int("3D", 16), int("0C", 16))
+    IMU.writeByte(0x3D, 0x0C)
+    time.sleep(1)
+    print("0x3d 0c")
+    print(IMU.readByte(0x3D))
 
     setup = 1
 
@@ -48,12 +59,12 @@ def getGravity():
         print("ERROR IMU has not been initialized")
         return [-1, -1, -1]
 
-    XMSB = IMU.readByte(int("33", 16))
-    XLSB = IMU.readByte(int("32", 16))
-    YMSB = IMU.readByte(int("31", 16))
-    YLSB = IMU.readByte(int("30", 16))
-    ZMSB = IMU.readByte(int("2F", 16))
-    ZLSB = IMU.readByte(int("2E", 16))
+    XMSB = IMU.readByte(0x33)
+    XLSB = IMU.readByte(0x32)
+    YMSB = IMU.readByte(0x31)
+    YLSB = IMU.readByte(0x30)
+    ZMSB = IMU.readByte(0x2F)
+    ZLSB = IMU.readByte(0x2E)
 
     print(XMSB)
     print(XLSB)
