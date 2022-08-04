@@ -8,10 +8,10 @@ spi = comm.SPIObject(int(bus),int(device),log,mode=0b11)
 
 
 while(True):        
-    add = input("address to write in hex EX. 0x0A:")
+    add = input("address to read/write in hex EX. 0x0A:")
     opp = input("Read (R) or Write (W):")
 
-    if(opp == 'R'):
+    if(opp == 'R' or opp == 'r'):
         retDat = spi.readByte(int(add, 16))
         print("bit range, hex,  ASCII")
         ctr = 4

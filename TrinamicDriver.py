@@ -1,6 +1,6 @@
 import CommunicationHandler as comm
 import time
-
+import os
 
 def twosComp(val, bits):
     if (val & (1 << (bits - 1))) != 0: # if sign bit is set e.g., 8bit: 128-255
@@ -10,9 +10,12 @@ def twosComp(val, bits):
 
 class trinamicDriver():
     def __init__(self, bus, device4671, device6100, setupFile, log):
+        os.system("modprobe spidev")
+
         self.spi4671 = comm.SPIObject(bus, device4671, log)
         self.spi6100 = comm.SPIObject(bus, device6100, log)
 
+        self.initTMC()
         self.initTMCfromFile(setupFile)
 
     # Initial Setup
@@ -149,10 +152,15 @@ class trinamicDriver():
         
     def stopMotor(self):
         #Set torque target to 0
+        self.spi4671.writeByte(0x63, [0,0,0,1])
         self.spi4671.writeByte(0x68, [0,0,0,0])
         self.spi4671.writeByte(0x66, [0,0,0,0])
         self.spi4671.writeByte(0x64, [0,0,0,0])
-        time.sleep(2)
+        
+    def hardStop(self):
+        self.spi4671.writeByte(0x68, [0,0,0,0])
+        self.spi4671.writeByte(0x66, [0,0,0,0])
+        self.spi4671.writeByte(0x64, [0,0,0,0])
         self.spi4671.writeByte(0x63, [0,0,0,0])
 
 
