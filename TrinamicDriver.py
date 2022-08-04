@@ -1,6 +1,13 @@
-import CommunicationHandler as comm
+#import CommunicationHandler as comm
+import BigCreteSpi as theCrete
 import time
 import os
+
+#MOSI = 32
+#MISO = 36
+#SCK = 38
+#CS6100 = 40
+#CS4671 = 35
 
 def twosComp(val, bits):
     if (val & (1 << (bits - 1))) != 0: # if sign bit is set e.g., 8bit: 128-255
@@ -12,8 +19,9 @@ class trinamicDriver():
     def __init__(self, bus, device4671, device6100, setupFile, log):
         os.system("modprobe spidev")
 
-        self.spi4671 = comm.SPIObject(bus, device4671, log)
-        self.spi6100 = comm.SPIObject(bus, device6100, log)
+        self.spi4671 = theCrete.BIG_CRETE_SPI(32, 36, 38, 35)
+
+        self.spi6100 = theCrete.BIG_CRETE_SPI(32, 36, 38, 40)
 
         self.initTMC()
         self.initTMCfromFile(setupFile)

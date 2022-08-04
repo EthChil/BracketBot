@@ -1,10 +1,12 @@
-import CommunicationHandler as comm
-
-log = comm.logger()
+import BigCreteSpi as theCrete
 
 bus = input("enter spibus number (0 - LEFT) or (1 - RIGHT):")
 device = input("enter device number (1 - 4671) or (0 - 6100):")
-spi = comm.SPIObject(int(bus),int(device),log,mode=0b11)
+
+if(device):
+    spi = theCrete.BIG_CRETE_SPI(32, 36, 38, 35)
+else:
+    spi = theCrete.BIG_CRETE_SPI(32, 36, 38, 40)
 
 
 while(True):        
@@ -22,34 +24,7 @@ while(True):
         data = input("data to write (31->0) EX. 12345678:")
         dataArr = []
         for i in range(4):
-            #print(i)
-            #print(data[i*2:(i*2)+2])
             dataArr.append(int(data[i*2:(i*2)+2], 16))
         print(dataArr)
         print(spi.writeByte(int(add, 16), dataArr))
-
-
-
-
-
-#spi = comm.SPIObject(0,0,log,mode=0b00)
-#print(spi.readByte(0b0000000))
-
-#spi = comm.SPIObject(0,0,log,mode=0b00)
-#print(spi.readByte(0b0000000))
-
-#spi = comm.SPIObject(0,0,log,mode=0b00)
-#print(spi.readByte(0b0000000))
-
-#spi = comm.SPIObject(0,0,log,mode=0b11)
-##print(spi.readByte(0b0000000))
-
-#spi = comm.SPIObject(0,0,log,mode=0b11)
-#print(spi.readByte(0b0000000))
-
-#spi = comm.SPIObject(0,0,log,mode=0b11)
-#print(spi.readByte(0b0000000))
-
-#spi = comm.SPIObject(0,0,log,mode=0b11)
-#print(spi.readByte(0b0000000))
 
