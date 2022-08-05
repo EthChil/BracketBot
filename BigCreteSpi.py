@@ -19,27 +19,33 @@ class BIG_CRETE_SPI():
     def __init__(self, mosi, miso, sck, cs):
             GPIO.setmode(GPIO.BOARD)
 
+            self.MOSI = mosi
+            self.MISO = miso
+            self.SCK = sck
+            self.CS = cs
+
             GPIO.setup(self.MOSI, GPIO.OUT)
             GPIO.setup(self.MISO, GPIO.IN)
-            GPIO.setup(self.SCK, GPIO.OUT)
+            GPIO.setup(self.SCK, GPIO.OUT, initial=GPIO.HIGH)
             GPIO.setup(self.CS, GPIO.OUT, initial=GPIO.HIGH)
 
     #DOING IT BIG
     def Harvi8XUltra(self, array):
-        if(len(array) % 8 != 0):
+        print(len(array))
+        if(len(array) > 40):
             return 0
         else:
-            output = []
+            output = [0,0,0,0,0]
             for index, value in enumerate(array):
-                output[index // 10] += value * (math.pow(2, (index % 8)))
+                output[index // 8] += int(value * (2 ** (7 - (index % 8))))
             return output
-
 
     def clockRead(self):
         GPIO.output(self.SCK, GPIO.LOW)
-        dat = GPIO.input(self.MISO)
         GPIO.output(self.SCK, GPIO.HIGH)
+        dat = GPIO.input(self.MISO)
         return dat
+
 
     def clockWrite(self):
         GPIO.output(self.SCK, GPIO.LOW)
@@ -50,13 +56,12 @@ class BIG_CRETE_SPI():
 
         GPIO.output(self.CS, GPIO.LOW)
 
-        for bit in range(39,0):
-            if(addr & 1 << bit != 0):
+        for bit in range(39,-1,-1):
+            if((addr<<32) & 1 << bit != 0):
                 GPIO.output(self.MOSI, GPIO.HIGH)
             else:
                 GPIO.output(self.MOSI, GPIO.LOW)
             readData.append(self.clockRead())
-
         GPIO.output(self.CS, GPIO.HIGH)
 
         return self.Harvi8XUltra(readData)
@@ -64,7 +69,7 @@ class BIG_CRETE_SPI():
     def writeByte(self, addr, data):
 
         #convert address and data to a big int
-        output = addr << (8*4)
+        output = (addr << (8*4)) + (1 << 39)
         for i, byte in enumerate(data):
             output += byte << (8*(3-i))
 
@@ -72,7 +77,7 @@ class BIG_CRETE_SPI():
         GPIO.output(self.CS, GPIO.LOW)
 
         #write bits
-        for bit in range(39,0):
+        for bit in range(39,-1,-1):
             if(output & 1 << bit != 0):
                 GPIO.output(self.MOSI, GPIO.HIGH)
             else:
