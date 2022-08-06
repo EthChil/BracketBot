@@ -48,13 +48,9 @@ class trinamicDriver():
 
         #set drv strength on 6100 0
         data = self.spi6100.readByte(0x0A)
-        data = self.spi6100.readByte(0x0A)
         data[0] = 00
         data[1] = 00
         self.spi6100.writeByte(0x0A, data)
-
-        #set bbm HS and LS to 400ns
-        self.spi6100.writeByte(0x19, [00,00,40,40])
 
         return True
 
@@ -120,7 +116,8 @@ class trinamicDriver():
         self.spi4671.writeByte(0x63, [0,0,0,0])
 
 
-
+    def getVelocity(self):
+        self.spi4671.readByte(0x6A)
 
 
 

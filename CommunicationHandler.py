@@ -2,7 +2,6 @@ import math
 
 from smbus2 import SMBus
 import datetime
-import spidev
 
 maxI2CBusses = 2
 

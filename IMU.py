@@ -66,13 +66,12 @@ def getGravity():
     ZMSB = IMU.readByte(0x2F)
     ZLSB = IMU.readByte(0x2E)
 
-    print(XMSB)
-    print(XLSB)
-    print(YMSB)
-    print(YLSB)
-    print(ZMSB)
-    print(ZLSB)
+    
+    return [twosComp((XMSB<<8) + XLSB, 16)/100,
+            twosComp((YMSB<<8) + YLSB, 16)/100,
+            twosComp((ZMSB<<8) + ZLSB, 16)/100]
 
 
 setupIMU()
-getGravity()
+print(getGravity())
+    
