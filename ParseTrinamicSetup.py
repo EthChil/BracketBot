@@ -3,8 +3,8 @@ import time
 mappings = {}
 
 mappingFile = open("4671RegMap.txt", 'r')
-setupFile = open("TrinamicConfig/test_4_R.c", 'r')
-output = open("TrinamicConfig/parsedConfig.txt", 'w')
+setupFile = open("TrinamicConfig/test_4_L_openloop.c", 'r')
+output = open("TrinamicConfig/parsedConfigOpenloop.txt", 'w')
 
 for line in mappingFile:
     values = line.split()

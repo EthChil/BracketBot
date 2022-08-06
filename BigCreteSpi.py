@@ -54,6 +54,7 @@ class BIG_CRETE_SPI():
     def readByte(self, addr):
         readData = []
 
+        autism = time.time()
         GPIO.output(self.CS, GPIO.LOW)
 
         for bit in range(39,-1,-1):
@@ -63,8 +64,11 @@ class BIG_CRETE_SPI():
                 GPIO.output(self.MOSI, GPIO.LOW)
             readData.append(self.clockRead())
         GPIO.output(self.CS, GPIO.HIGH)
+        variable = time.time()
+        
+        print(variable - autism)
 
-        return self.Harvi8XUltra(readData)
+        return self.Harvi8XUltra(readData)[1:]
 
     def writeByte(self, addr, data):
 

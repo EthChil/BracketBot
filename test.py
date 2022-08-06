@@ -3,10 +3,18 @@ import BigCreteSpi as theCrete
 bus = input("enter spibus number (0 - LEFT) or (1 - RIGHT):")
 device = input("enter device number (1 - 4671) or (0 - 6100):")
 
-if(device):
-    spi = theCrete.BIG_CRETE_SPI(32, 36, 38, 35)
+if(not int(bus)):
+    if(int(device)):
+        spi = theCrete.BIG_CRETE_SPI(13, 12, 11, 16)#35
+    else:
+        spi = theCrete.BIG_CRETE_SPI(13, 12, 11, 7)
 else:
-    spi = theCrete.BIG_CRETE_SPI(32, 36, 38, 40)
+    if(int(device)):
+        spi = theCrete.BIG_CRETE_SPI(36, 38, 37, 40)#35
+    else: 
+        spi = theCrete.BIG_CRETE_SPI(36, 38, 37, 35)
+
+
 
 
 while(True):        
@@ -16,7 +24,7 @@ while(True):
     if(opp == 'R' or opp == 'r'):
         retDat = spi.readByte(int(add, 16))
         print("bit range, hex,  ASCII")
-        ctr = 4
+        ctr = 3
         for item in retDat:
             print((str((ctr*8) + 7) + "->" + str(ctr*8)).ljust(9) + "  " + hex(item) + "  " + chr(item))
             ctr -= 1

@@ -16,12 +16,10 @@ def twosComp(val, bits):
 
 
 class trinamicDriver():
-    def __init__(self, bus, device4671, device6100, setupFile, log):
-        os.system("modprobe spidev")
+    def __init__(self, mosi, miso, sck, cs4671, cs6100, setupFile):
+        self.spi4671 = theCrete.BIG_CRETE_SPI(mosi, miso, sck, cs4671)
 
-        self.spi4671 = theCrete.BIG_CRETE_SPI(32, 36, 38, 35)
-
-        self.spi6100 = theCrete.BIG_CRETE_SPI(32, 36, 38, 40)
+        self.spi6100 = theCrete.BIG_CRETE_SPI(mosi, miso, sck, cs6100)
 
         self.initTMC()
         self.initTMCfromFile(setupFile)
@@ -60,81 +58,27 @@ class trinamicDriver():
 
         return True
 
-    def setupMotor(self):
-        # set pole pairs and motor type
-        self.spi4671.writeByte(0x1B, [0, 3, 0, 15])
-
-        #PWM polarity for 6100
-        self.spi4671.writeByte(0x17, [0, 0, 0, 0])
-
-        #max pwm frequency
-        self.spi4671.writeByte(0x18, [0,0,15,159])
-
-        #Break before make to 400ns on LS and HS
-        self.spi4671.writeByte(0x19, [0,0,40,40])
-
-        #PWM chopper set to centered PWM for FOC
-        self.spi4671.writeByte(0x1A, [0,0,0,7])
-
-        # Feedback selection
-        # set feedback to use encoder
-        self.spi4671.writeByte(0x52, [0, 0, 0, 3])
-        # set velocity mode to use encoder
-        self.spi4671.writeByte(0x50, [0, 0, 0, 9])
-
-    def setupADC(self):
-        #Configure ADC I0
-        self.spi4671.writeByte(0x0A, [24,0,1,0])
-
-        #Configure ADC
-        self.spi4671.writeByte(0x04, [0,16,0,16])
-        self.spi4671.writeByte(0x05, [32,0,0,0])
-        self.spi4671.writeByte(0x06, [32,0,0,0])
-        self.spi4671.writeByte(0x07, [1,78,1,78])
-        self.spi4671.writeByte(0x09, [1,0,129,80])
-        self.spi4671.writeByte(0x08, [1,0,129,165])
 
     def setupEncoder(self):
-        # ABN encoder settings
-        #set ABN decoder mode (decode polarities and z tick)
-        self.spi4671.writeByte(0x25, [0,0,16,0])
+        self.spi4671.writeByte(0x52, [0,0,0,2])   #TMC4671_PHI_E_SELECTION
+        self.spi4671.writeByte(0x24, [0,0,9,201]) #TMC4671_UQ_UD_EXT
+        self.spi4671.writeByte(0x63, [0,0,0,8])   #TMC4671_MODE_RAMP_MODE_MOTION
+        self.spi4671.writeByte(0x20, [0,0,0,60])  #TMC4671_OPENLOOP_ACCELERATION
+        self.spi4671.writeByte(0x21, [0,0,0,20])  #TMC4671_OPENLOOP_VELOCITY_TARGET
+        time.sleep(5)
+        self.spi4671.writeByte(0x21, [0,0,0,0])   #TMC4671_OPENLOOP_VELOCITY_TARGET
+        self.spi4671.writeByte(0x24, [0,0,0,0])   #TMC4671_UQ_UD_EXT
+        self.spi4671.writeByte(0x52, [0,0,0,3])   #TMC4671_PHI_E_SELECTION
 
-        #set the PPR of the encoder (8192)
-        self.spi4671.writeByte(0x26, [0,0,32,0])
 
-        #ABN decoder count
-        self.spi4671.writeByte(0x27, [0,0,31,98])#1F62
+    def rotateMotorOpenloop(self):
+        self.spi4671.writeByte(0x24, [0,0,9,201])
+        self.spi4671.writeByte(0x20, [0,0,0,60])
+        self.spi4671.writeByte(0x63, [0,0,0,8])
+        result = list(velocityTarget.to_bytes(4, 'big', signed=True))
 
-        #Encoder PHI M offset 
-        self.spi4671.writeByte(0x29, [0,0,0,0])
 
-        # Init encoder (mode 0)
-        # set to uq_ud_ext ramp mode motion mode
-        self.spi4671.writeByte(0x63, [0, 0, 0, 8])
-        # encoder PHI M offset
-        self.spi4671.writeByte(0x29, [0, 0, 0, 0])
-        # PHI E selection (phi e ext)
-        self.spi4671.writeByte(0x52, [0, 0, 0, 1])
-        # set phi e ext to 0
-        self.spi4671.writeByte(0x1C, [0, 0, 0, 0])
-        # set UQ UD ext to 0
-        self.spi4671.writeByte(0x24, [0, 0, 0, 0])
 
-        time.sleep(1)
-        # set encoder count to 0
-        self.spi4671.writeByte(0x27, [0, 0, 0, 0])
-
-    def setupPIDConstants(self):
-        #Torque PID Flux Limits
-        self.spi4671.writeByte(0x5E, [0,0,3,232])
-
-        #Set PI constant for Torque control
-        self.spi4671.writeByte(0x56, [1,0,1,0])
-
-        #Set PI constant for Flux control
-        self.spi4671.writeByte(0x54, [1,0,1,0])
-
-    #torque is in ??? (-_-)
     def rotateMotorTorque(self, torqueTarget):
         # Switch to torque mode in motion mode
         self.spi4671.writeByte(0x63, [0, 0, 0, 1])
@@ -161,11 +105,15 @@ class trinamicDriver():
     def stopMotor(self):
         #Set torque target to 0
         self.spi4671.writeByte(0x63, [0,0,0,1])
+        self.spi4671.writeByte(0x21, [0,0,0,0])
+        self.spi4671.writeByte(0x24, [0,0,0,0])
         self.spi4671.writeByte(0x68, [0,0,0,0])
         self.spi4671.writeByte(0x66, [0,0,0,0])
         self.spi4671.writeByte(0x64, [0,0,0,0])
         
     def hardStop(self):
+        self.spi4671.writeByte(0x21, [0,0,0,0])
+        self.spi4671.writeByte(0x24, [0,0,0,0])
         self.spi4671.writeByte(0x68, [0,0,0,0])
         self.spi4671.writeByte(0x66, [0,0,0,0])
         self.spi4671.writeByte(0x64, [0,0,0,0])
