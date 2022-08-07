@@ -31,7 +31,6 @@ class BIG_CRETE_SPI():
 
     #DOING IT BIG
     def Harvi8XUltra(self, array):
-        print(len(array))
         if(len(array) > 40):
             return 0
         else:
@@ -53,8 +52,6 @@ class BIG_CRETE_SPI():
 
     def readByte(self, addr):
         readData = []
-
-        autism = time.time()
         GPIO.output(self.CS, GPIO.LOW)
 
         for bit in range(39,-1,-1):
@@ -66,7 +63,6 @@ class BIG_CRETE_SPI():
         GPIO.output(self.CS, GPIO.HIGH)
         variable = time.time()
         
-        print(variable - autism)
 
         return self.Harvi8XUltra(readData)[1:]
 

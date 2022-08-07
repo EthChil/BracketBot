@@ -57,6 +57,7 @@ class trinamicDriver():
 
     def setupEncoder(self):
         self.spi4671.writeByte(0x52, [0,0,0,2])   #TMC4671_PHI_E_SELECTION
+        self.spi4671.writeByte(0x1F, [0,0,0,0]) #TMC4671_OPENLOOP_PHI_DIRECTION
         self.spi4671.writeByte(0x24, [0,0,9,201]) #TMC4671_UQ_UD_EXT
         self.spi4671.writeByte(0x63, [0,0,0,8])   #TMC4671_MODE_RAMP_MODE_MOTION
         self.spi4671.writeByte(0x20, [0,0,0,60])  #TMC4671_OPENLOOP_ACCELERATION
@@ -67,12 +68,14 @@ class trinamicDriver():
         self.spi4671.writeByte(0x52, [0,0,0,3])   #TMC4671_PHI_E_SELECTION
 
 
-    def rotateMotorOpenloop(self):
-        self.spi4671.writeByte(0x24, [0,0,9,201])
+    def rotateMotorOpenloop(self, velocityTarget):
+        self.spi4671.writeByte(0x52, [0,0,0,2])
+        self.spi4671.writeByte(0x1F, [0,0,0,0]) #TMC4671_OPENLOOP_PHI_DIRECTION
+        self.spi4671.writeByte(0x24, [0,0,15,160])
         self.spi4671.writeByte(0x20, [0,0,0,60])
         self.spi4671.writeByte(0x63, [0,0,0,8])
         result = list(velocityTarget.to_bytes(4, 'big', signed=True))
-
+        self.spi4671.writeByte(0x21, result)
 
 
     def rotateMotorTorque(self, torqueTarget):
@@ -117,9 +120,8 @@ class trinamicDriver():
 
 
     def getVelocity(self):
-        self.spi4671.readByte(0x6A)
-
-
+        intVelocity = int.from_bytes(bytearray(self.spi4671.readByte(0x6A)), 'big', signed=True)
+        return intVelocity
 
 
 
