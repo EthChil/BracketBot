@@ -73,8 +73,6 @@ class trinamicDriver():
         self.spi4671.writeByte(0x63, [0,0,0,8])
         result = list(velocityTarget.to_bytes(4, 'big', signed=True))
 
-
-
     def rotateMotorTorque(self, torqueTarget):
         # Switch to torque mode in motion mode
         self.spi4671.writeByte(0x63, [0, 0, 0, 1])
