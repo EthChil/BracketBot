@@ -2,9 +2,20 @@ import time
 
 mappings = {}
 
+
 mappingFile = open("4671RegMap.txt", 'r')
-setupFile = open("TrinamicConfig/test_4_L_openloop.c", 'r')
-output = open("TrinamicConfig/parsedConfigOpenloop.txt", 'w')
+
+#UNCOMMENT TO GENERATE LEFT SIDE
+#setupFile = open("TrinamicConfig/test_4_L.c", 'r')
+#output = open("TrinamicConfig/parsedConfigOpenloopL.txt", 'w')
+
+#UNCOMMENT TO GENERATE RIGHT SIDE
+#setupFile = open("TrinamicConfig/test_4_R.c", 'r')
+#output = open("TrinamicConfig/parsedConfigOpenloopR.txt", 'w')
+
+#UNCOMMENT TO GENERATE TEST FILE
+# setupFile = open("TrinamicConfig/parse_test.c", 'r')
+# output = open("TrinamicConfig/parse_test_output.txt", 'w')
 
 for line in mappingFile:
     values = line.split()
@@ -13,7 +24,8 @@ for line in mappingFile:
     mappings[values[0]] = int(values[1], 16)
 
 for line in setupFile:
-    if("//" in line or len(line) < 5):
+    if(("//" in line and ";" not in line ) or len(line) < 5):
+        print("skipped", line)
         continue
 
     if("wait" in line):
