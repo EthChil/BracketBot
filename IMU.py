@@ -82,7 +82,7 @@ class IMU:
         time.sleep(0.03)
 
         #Set operation mode in OPR_MODE (this should be NDOF)
-        IMU.writeByte(0x3D, 0x0C)
+        self.writeByte(0x3D, 0x0C)
         time.sleep(1)
         print("0x3d 0c")
         print(self.readByte(0x3D))
@@ -111,6 +111,11 @@ class IMU:
     def getAngle(self):
         vec = self.getGravityVector()
 
-        return math.degrees(math.acos(vec[1]/math.sqrt(math.pow(vec[1], 2) + math.pow(vec[2], 2))))
+        nega = 0
+        if(vec[2] < 0):
+            nega = -1
+        else:
+            nega = 1
+        return math.degrees(math.acos(vec[1]/math.sqrt(math.pow(vec[1], 2) + math.pow(vec[2], 2))))*nega
 
     

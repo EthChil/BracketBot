@@ -3,8 +3,8 @@ from threading import Thread
 import time
 
 #MOSI MISO SCK 4671 6100
-driverLEFT = t.trinamicDriver(13, 12, 11, 16, 7,'TrinamicConfig/parsedConfigL.txt')
-driverRIGHT = t.trinamicDriver(36, 38, 37, 40, 35,'TrinamicConfig/parsedConfigR.txt')
+driverLEFT = t.trinamicDriver(13, 12, 11, 16, 7,'L')
+driverRIGHT = t.trinamicDriver(36, 38, 37, 40, 35,'R')
 driverRIGHT.stopMotor()
 driverLEFT.stopMotor()
 

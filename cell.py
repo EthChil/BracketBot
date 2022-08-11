@@ -15,19 +15,45 @@ driverLEFT.stopMotor()
 IMU = IMU.IMU(0, 40)
 IMU.setupIMU()
 
-trim = 0
-
-kP = 0
-kI = 0
+kP = 10 #deg - deg * kP = rpm
+kI = 20
 kD = 0
-accumError = 0
-prevError = 0
+cP = 0.0005 #rpm - rpm * cP = angle
+cI = 0
+cD = 0
+balanceAccumError = 0
+balancePrevError = 0
+setpointAccumError = 0
+setpointPrevError = 0
+defaultSetpoint = -0.58
+a = 0
+b = 0
+c = 0
+d = 0
+fi = open("run.txt", "w")
 
 q = queue.Queue()
 
+def setpointPID(target, actual, deltaTime):
+    global cP, cI, cD, fi, setpointAccumError, setpointPrevError
+    # where input is velocity, output is angle set point
+    # positive angle is forward leaning -> forward velocity
+    # if velocity is positive, reduce angle
+    # example: if target is 0, actual velocity is 2, error = 2 I want to reduce angle by 0.05deg so kP should be around 0.025
+
+    error = target-actual
+
+    setpointAccumError += error*deltaTime
+    derivative = (error-setpointPrevError)/deltaTime
+    print("cP", cP * error)
+    #print("cI", cI * setpointAccumError)
+    #print("cD", cD * derivative)
+
+    return (cP * error) + (cD * derivative) + (cI * balanceAccumError) + defaultSetpoint
+
 #assumes that positive angle is forward leaning
-def handlePID(target, actual, deltaTime):
-    global kP, kI, kD, accumError, prevError
+def balancePID(target, actual, deltaTime):
+    global kP, kI, kD, fi, balanceAccumError, balancePrevError
 
     #if the robot is leaning forward 20 degrees and wants to go to 0
     #this will generate a positive number
@@ -35,97 +61,73 @@ def handlePID(target, actual, deltaTime):
 
     #note: take for instance the robot is at 20 degrees and wants to go to zero this will be negative
     #(leaning forward generates a negative slope and derivative)
-    derivative = (error-prevError)/deltaTime
-    accumError += error*deltaTime
+    derivative = (error-balancePrevError)/deltaTime
+    if(abs(balanceAccumError*kI) < 20 or abs(balanceAccumError + error) < abs(balanceAccumError)):
+        balanceAccumError += error*deltaTime
 
-    return (kP * error) + (kD * derivative) + (kI * accumError)
+    print("kP", kP * error)
+    print("kI", kI * balanceAccumError)
+    #print("kD", kD * derivative)
+
+    fi.write(str(kP*error) + ", " + str(kI*balanceAccumError) + ", " + str(kD*derivative) + ", " + str(target) + ", " + str(actual) + "\n")
+
+    return (kP * error) + (kD * derivative) + (kI * balanceAccumError)
 
 
 def inputTask():
     while True:
-        desiredAngle = input("enter angle:")
-        q.put(desiredAngle)
+        desiredVelocity = input("enter velocity: ")
+        if(len(desiredVelocity) == 0):
+            #driverLEFT.stopMotor()
+            #driverRIGHT.stopMotor()
+            driverLEFT.rotateMotorOpenloop(0)
+            driverRIGHT.rotateMotorOpenloop(0)
+            print("Stopping motor, appending -1000")
+            q.put(int(-1000))
+            exit(0)
+        else:
+            var = defaultSetpoint
+            try:
+                var = int(desiredVelocity)
+            except:
+                print("illegal character")
+            q.put(var)
 
 def main():
     threading.Thread(target=inputTask, daemon=True).start()
 
-    targAng = 0
+    targAng = defaultSetpoint
+    targVel = 0
     lastTime = time.time()
 
     while(True):
         if(not q.empty()):
-            targAng = q.get()
+            targVel = q.get()
+        
+        if(targVel == -1000):
+            print("Stopping motor again, exitting thread")
+            #driverLEFT.stopMotor()
+            #driverRIGHT.stopMotor()
+            driverLEFT.rotateMotorOpenloop(0)
+            driverRIGHT.rotateMotorOpenloop(0)
+            time.sleep(1)
+            exit(0)
 
         currAng = IMU.getAngle()
-
-        output = handlePID(targAng, currAng, time.time()-lastTime)
+        currVel = (driverLEFT.getVelocity() + driverRIGHT.getVelocity())/2
+        targAngtemp = setpointPID(targVel, currVel, time.time()-lastTime)
+        output = balancePID(targAng, currAng, time.time()-lastTime)
         lastTime = time.time()
-        driverLEFT.rotateMotorOpenloop(output)
-        driverRIGHT.rotateMotorOpenloop(output)
+        print("target angle: ", targAngtemp)
+        #print("RIGHT IS GOING: ", int(output))
+        print("ANGLE: ", currAng) 
+        print("Motor speed: ", int(output))
+        driverLEFT.rotateMotorOpenloop(int(output))
+        driverRIGHT.rotateMotorOpenloop(int(output))
 
 
-
-
-
-
-
-print("Motor Testing Wizard")
-print("Motor Selection (L)eft/(R)ight/(B)oth")
-print("Mode Selection (O)penloop/(T)orque/(V)elocity/(P)osition")
-print("Value")
-print("Example: BV10 rotates both motors at 10rpm, LT500 rotates left motor at 500Nm")
-print("Stop side with L or R")
-print("E-Stop with Enter")
-
-while True:
-    instr = input("Enter command: ")
-    inlen = len(instr)
-    if inlen == 0:
-        driverLEFT.stopMotor()
-        driverRIGHT.stopMotor()
-    elif inlen == 1:
-        if instr == 'L':
-            driverLEFT.stopMotor()
-        elif instr == 'R':
-            driverRIGHT.stopMotor()
-    elif inlen > 2 and instr[2:].isdigit():
-        if instr[0] == 'L' or instr[0] == 'B':
-            if instr[1] == 'O':
-                driverLEFT.rotateMotorOpenloop()
-                print("driverLEFT.rotateMotorOpenloop()")
-            elif instr[1] == 'T':
-                driverLEFT.rotateMotorTorque(int(instr[2:]))
-                print("driverLEFT.rotateMotorTorque(",int(instr[2:]),")")
-            elif instr[1] == 'V':
-                driverLEFT.rotateMotorVelocity(int(instr[2:]))
-                print("driverLEFT.rotateMotorVelocity(",int(instr[2:]),")")
-            elif instr[1] == 'P':
-                driverLEFT.rotateMotorPosition(int(instr[2:]))
-                print("driverLEFT.rotateMotorPosition(",int(instr[2:]),")")
-            else:
-                print("Illegal Mode")
-        elif instr[0] != 'R':
-            print("Illegal Side")
-        if instr[0] == 'R' or instr[0] == 'B':
-            if instr[1] == 'O':
-                driverRIGHT.rotateMotorOpenloop()
-                print("driverRIGHT.rotateMotorOpenloop()")
-            elif instr[1] == 'T':
-                driverRIGHT.rotateMotorTorque(int(instr[2:]))
-                print("driverRIGHT.rotateMotorTorque(",int(instr[2:]),")")
-            elif instr[1] == 'V':
-                driverRIGHT.rotateMotorVelocity(int(instr[2:]))
-                print("driverRIGHT.rotateMotorVelocity(",int(instr[2:]),")")
-            elif instr[1] == 'P':
-                driverRIGHT.rotateMotorPosition(int(instr[2:]))
-                print("driverRIGHT.rotateMotorPosition(",int(instr[2:]),")")
-            else:
-                print("Illegal Mode")
-        elif instr[0] != 'L':
-            print("Illegal Side")
-    else:
-        print("Illegal Command")
-
-driverRIGHT.stopMotor()
+main()
 driverLEFT.stopMotor()
-print("Thank you for using the BIG CRETE MOTOR UTILITY, Im sure you'll be back!")
+driverRIGHT.stopMotor()
+time.sleep(1)
+print("End of script")
