@@ -80,6 +80,8 @@ class trinamicDriver():
 
     def rotateMotorTorque(self, torqueTarget):
         # Switch to torque mode in motion mode
+        
+        self.spi4671.writeByte(0x52, [0,0,0,3])
         self.spi4671.writeByte(0x63, [0, 0, 0, 1])
 
         result = list(torqueTarget.to_bytes(2, 'big', signed=True))
@@ -88,6 +90,7 @@ class trinamicDriver():
         self.spi4671.writeByte(0x64, result + [0, 0])
     
     def rotateMotorVelocity(self, velocityTarget):
+        self.spi4671.writeByte(0x52, [0,0,0,3])
         self.spi4671.writeByte(0x63, [0,0,0,2])
 
         result = list(velocityTarget.to_bytes(4, 'big', signed=True))
@@ -95,6 +98,7 @@ class trinamicDriver():
         self.spi4671.writeByte(0x66, result)
     
     def rotateMotorPosition(self, positionTarget):
+        self.spi4671.writeByte(0x52, [0,0,0,3])
         self.spi4671.writeByte(0x63, [0,0,0,3])
 
         result = list(positionTarget.to_bytes(4, 'big', signed=True))
@@ -109,6 +113,7 @@ class trinamicDriver():
         self.spi4671.writeByte(0x68, [0,0,0,0])
         self.spi4671.writeByte(0x66, [0,0,0,0])
         self.spi4671.writeByte(0x64, [0,0,0,0])
+        self.spi4671.writeByte(0x52, [0,0,0,0])
         
     def hardStop(self):
         self.spi4671.writeByte(0x21, [0,0,0,0])
