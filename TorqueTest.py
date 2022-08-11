@@ -1,5 +1,8 @@
 import BigCreteSpi as theCrete
+<<<<<<< HEAD
 import 4671RegDict as d
+=======
+>>>>>>> 4a12961b533b27fa99cc2f88e2566ce2da8b4f02
 import time
 import os
 
@@ -8,6 +11,7 @@ Lspi6100 = theCrete.BIG_CRETE_SPI(13, 12, 11, 7)
 Rspi4671 = theCrete.BIG_CRETE_SPI(36, 38, 37, 40)
 Rspi6100 = theCrete.BIG_CRETE_SPI(36, 38, 37, 35)
 
+<<<<<<< HEAD
 Lspi4671.writeByte(d.regs_4671["TMC4671_MOTOR_TYPE_N_POLE_PAIRS"],  [0x00,0x03,0x00,0x0F])
 Lspi4671.writeByte(d.regs_4671["TMC4671_PWM_POLARITIES"],           [0x00,0x00,0x00,0x00])
 Lspi4671.writeByte(d.regs_4671["TMC4671_PWM_MAXCNT"],               [0x00,0x00,0x0F,0x9F])
@@ -62,3 +66,6 @@ time.sleep(1)
 
 #Stop
 Lspi4671.writeByte(d.regs_4671["PID_TORQUE_FLUX_TARGET"],           [0x00,0x00,0x00,0x00])
+=======
+
+>>>>>>> 4a12961b533b27fa99cc2f88e2566ce2da8b4f02
