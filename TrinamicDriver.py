@@ -23,7 +23,8 @@ class trinamicDriver():
         self.side = side
         self.initBOB()
         # self.initTMCfromFile(setupFile)
-        self.initBOB()
+        self.init4671()
+        self.setupEncoder()
 
     # Initial Setup
     # def initTMCfromFile(self, filename):

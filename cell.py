@@ -1,4 +1,6 @@
-import TrinamicDriver as t
+#import TrinamicDriver as t
+import odriveDriver as o
+
 import IMU
 import threading
 import queue
@@ -6,18 +8,18 @@ import sys
 import time
 
 #MOSI MISO SCK 4671 6100
-driverLEFT = t.trinamicDriver(13, 12, 11, 16, 7,'TrinamicConfig/parsedConfigL.txt')
-driverRIGHT = t.trinamicDriver(36, 38, 37, 40, 35,'TrinamicConfig/parsedConfigR.txt')
-driverRIGHT.stopMotor()
-driverLEFT.stopMotor()
+#driverLEFT = t.trinamicDriver(13, 12, 11, 16, 7,'L')
+#driverRIGHT = t.trinamicDriver(36, 38, 37, 40, 35,'R')
+#driverRIGHT.stopMotor()
+#driverLEFT.stopMotor()
 
 
 IMU = IMU.IMU(0, 40)
 IMU.setupIMU()
 
-kP = 10 #deg - deg * kP = rpm
-kI = 20
-kD = 0
+kP = 750 #deg - deg * kP = rpm
+kI = 0
+kD = 400
 cP = 0.0005 #rpm - rpm * cP = angle
 cI = 0
 cD = 0
@@ -58,20 +60,24 @@ def balancePID(target, actual, deltaTime):
     #if the robot is leaning forward 20 degrees and wants to go to 0
     #this will generate a positive number
     error = actual-target
-
+    p_error = 0
+    if actual > 0:
+        p_error = kP*error + 450
+    else:
+        p_error = kP*error - 450
     #note: take for instance the robot is at 20 degrees and wants to go to zero this will be negative
     #(leaning forward generates a negative slope and derivative)
     derivative = (error-balancePrevError)/deltaTime
-    if(abs(balanceAccumError*kI) < 20 or abs(balanceAccumError + error) < abs(balanceAccumError)):
-        balanceAccumError += error*deltaTime
+    #if(abs(balanceAccumError*kI) < 20 or abs(balanceAccumError + error) < abs(balanceAccumError)):
+    balanceAccumError += error*deltaTime
 
-    print("kP", kP * error)
+    print("kP", p_error)
     print("kI", kI * balanceAccumError)
     #print("kD", kD * derivative)
 
     fi.write(str(kP*error) + ", " + str(kI*balanceAccumError) + ", " + str(kD*derivative) + ", " + str(target) + ", " + str(actual) + "\n")
 
-    return (kP * error) + (kD * derivative) + (kI * balanceAccumError)
+    return (p_error) + (kD * derivative) + (kI * balanceAccumError)
 
 
 def inputTask():
@@ -80,8 +86,6 @@ def inputTask():
         if(len(desiredVelocity) == 0):
             #driverLEFT.stopMotor()
             #driverRIGHT.stopMotor()
-            driverLEFT.rotateMotorOpenloop(0)
-            driverRIGHT.rotateMotorOpenloop(0)
             print("Stopping motor, appending -1000")
             q.put(int(-1000))
             exit(0)
@@ -106,28 +110,32 @@ def main():
         
         if(targVel == -1000):
             print("Stopping motor again, exitting thread")
-            #driverLEFT.stopMotor()
-            #driverRIGHT.stopMotor()
-            driverLEFT.rotateMotorOpenloop(0)
-            driverRIGHT.rotateMotorOpenloop(0)
+            driverLEFT.stopMotor()
+            driverRIGHT.stopMotor()
             time.sleep(1)
             exit(0)
 
         currAng = IMU.getAngle()
         currVel = (driverLEFT.getVelocity() + driverRIGHT.getVelocity())/2
-        targAngtemp = setpointPID(targVel, currVel, time.time()-lastTime)
-        output = balancePID(targAng, currAng, time.time()-lastTime)
+        #argAngtemp = setpointPID(targVel, currVel, time.time()-lastTime)
+        output = balancePID(defaultSetpoint, currAng, time.time()-lastTime)
         lastTime = time.time()
-        print("target angle: ", targAngtemp)
+        #rint("target angle: ", targAngtemp)
         #print("RIGHT IS GOING: ", int(output))
         print("ANGLE: ", currAng) 
-        print("Motor speed: ", int(output))
-        driverLEFT.rotateMotorOpenloop(int(output))
-        driverRIGHT.rotateMotorOpenloop(int(output))
+        print("Motor torque: ", int(output))
+        driverLEFT.rotateMotorTorque(int(output))
+        driverRIGHT.rotateMotorTorque(int(output))
 
 
 main()
+driverRIGHT.rotateMotorTorque(int(output))
+driverLEFT.rotateMotorTorque(int(output))
 driverLEFT.stopMotor()
 driverRIGHT.stopMotor()
-time.sleep(1)
+time.sleep(0.5)
+if driverLEFT.getVelocity() > 5 or driverRIGHT.getVelocity() > 5:
+    driverLEFT.hardStopMotor()
+    driverRIGHT.hardStopMotor()
+    time.sleep(0.5)
 print("End of script")
