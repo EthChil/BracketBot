@@ -113,9 +113,23 @@ class IMU:
 
         nega = 0
         if(vec[2] < 0):
-            nega = -1
-        else:
             nega = 1
+        else:
+            nega = -1
         return math.degrees(math.acos(vec[1]/math.sqrt(math.pow(vec[1], 2) + math.pow(vec[2], 2))))*nega
+
+
+    def getAngleCompRads(self):
+        #compensation for gyro mount
+        adjust = -1.5 #degrees
+
+        vec = self.getGravityVector()
+
+        nega = 0
+        if(vec[2] < 0):
+            nega = 1
+        else:
+            nega = -1
+        return (math.degrees(math.acos(vec[1]/math.sqrt(math.pow(vec[1], 2) + math.pow(vec[2], 2))))*nega + adjust)/180 * math.pi
 
     

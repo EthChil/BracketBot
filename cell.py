@@ -1,11 +1,12 @@
 #import TrinamicDriver as t
-import odriveDriver as o
+from odriveDriver import Axis
 
 import IMU
 import threading
 import queue
 import sys
 import time
+import odrive
 
 #MOSI MISO SCK 4671 6100
 #driverLEFT = t.trinamicDriver(13, 12, 11, 16, 7,'L')
@@ -13,21 +14,29 @@ import time
 #driverRIGHT.stopMotor()
 #driverLEFT.stopMotor()
 
+odrv0 = odrive.find_any()
+
+driverRIGHT = Axis(odrv0.axis1)
+driverLEFT = Axis(odrv0.axis0)
+driverLEFT.setup()
+driverRIGHT.setup()
+
 
 IMU = IMU.IMU(0, 40)
 IMU.setupIMU()
 
-kP = 750 #deg - deg * kP = rpm
+#yo tinder tuning
+kP = 0.5 #deg - deg * kP = rpm
 kI = 0
-kD = 400
-cP = 0.0005 #rpm - rpm * cP = angle
+kD = 0.0001
+cP = 0.0 #0.3 rpm - rpm * cP = angle
 cI = 0
 cD = 0
 balanceAccumError = 0
 balancePrevError = 0
 setpointAccumError = 0
 setpointPrevError = 0
-defaultSetpoint = -0.58
+defaultSetpoint = -0.46
 a = 0
 b = 0
 c = 0
@@ -60,11 +69,7 @@ def balancePID(target, actual, deltaTime):
     #if the robot is leaning forward 20 degrees and wants to go to 0
     #this will generate a positive number
     error = actual-target
-    p_error = 0
-    if actual > 0:
-        p_error = kP*error + 450
-    else:
-        p_error = kP*error - 450
+    p_error = kP*error
     #note: take for instance the robot is at 20 degrees and wants to go to zero this will be negative
     #(leaning forward generates a negative slope and derivative)
     derivative = (error-balancePrevError)/deltaTime
@@ -84,11 +89,15 @@ def inputTask():
     while True:
         desiredVelocity = input("enter velocity: ")
         if(len(desiredVelocity) == 0):
-            #driverLEFT.stopMotor()
-            #driverRIGHT.stopMotor()
+            driverLEFT.stop()
+            driverRIGHT.stop()
             print("Stopping motor, appending -1000")
             q.put(int(-1000))
             exit(0)
+        elif(desiredVelocity == "+"):
+            defaultSetpoint += 0.01
+        elif(desiredVelocity == "-"):
+            defaultSetpoint -= 0.01
         else:
             var = defaultSetpoint
             try:
@@ -100,42 +109,48 @@ def inputTask():
 def main():
     threading.Thread(target=inputTask, daemon=True).start()
 
-    targAng = defaultSetpoint
     targVel = 0
     lastTime = time.time()
 
+    currVel = 0
     while(True):
+        
+
         if(not q.empty()):
             targVel = q.get()
         
         if(targVel == -1000):
             print("Stopping motor again, exitting thread")
-            driverLEFT.stopMotor()
-            driverRIGHT.stopMotor()
+            driverLEFT.stop()
+            driverRIGHT.stop()
             time.sleep(1)
             exit(0)
 
         currAng = IMU.getAngle()
-        currVel = (driverLEFT.getVelocity() + driverRIGHT.getVelocity())/2
-        #argAngtemp = setpointPID(targVel, currVel, time.time()-lastTime)
-        output = balancePID(defaultSetpoint, currAng, time.time()-lastTime)
+        lastVel = currVel
+        currVel = (-driverLEFT.get_vel() + driverRIGHT.get_vel())/2 # might be wrong 
+        targAngtemp = setpointPID(targVel, currVel, time.time()-lastTime)
+        output = balancePID(targAngtemp, currAng, time.time()-lastTime)
         lastTime = time.time()
-        #rint("target angle: ", targAngtemp)
-        #print("RIGHT IS GOING: ", int(output))
-        print("ANGLE: ", currAng) 
-        print("Motor torque: ", int(output))
-        driverLEFT.rotateMotorTorque(int(output))
-        driverRIGHT.rotateMotorTorque(int(output))
-
+        #print("target angle: ", targAngtemp)
+        #print("ANGLE: ", currAng) 
+        print("Act motor vel: ",currVel)
+        print("Motor velocity: ", output)
+        print("Act motor acc: ", currVel - lastVel)
+        driverLEFT.vel_set(-output)
+        driverRIGHT.vel_set(output)
 
 main()
-driverRIGHT.rotateMotorTorque(int(output))
-driverLEFT.rotateMotorTorque(int(output))
-driverLEFT.stopMotor()
-driverRIGHT.stopMotor()
-time.sleep(0.5)
-if driverLEFT.getVelocity() > 5 or driverRIGHT.getVelocity() > 5:
-    driverLEFT.hardStopMotor()
-    driverRIGHT.hardStopMotor()
-    time.sleep(0.5)
+#driverRIGHT.rotateMotorTorque(int(output))
+#driverLEFT.rotateMotorTorque(int(output))
+#driverLEFT.stopMotor()
+#driverRIGHT.stopMotor()
+#time.sleep(0.5)
+#if driverLEFT.getVelocity() > 5 or driverRIGHT.getVelocity() > 5:
+#    driverLEFT.hardStopMotor()
+#    driverRIGHT.hardStopMotor()
+#    time.sleep(0.5)
+driverLEFT.stop()
+driverRIGHT.stop()
+
 print("End of script")
