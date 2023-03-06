@@ -124,6 +124,7 @@ class IMU:
         adjust = -1.5 #degrees
 
         vec = self.getGravityVector()
+        print(vec)
 
         nega = 0
         if(vec[2] < 0):
