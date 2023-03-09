@@ -708,7 +708,8 @@ interfaces:
             attributes:
               index: readonly uint32
               pre_calibrated: bool
-              calib_anticogging: readonly bool
+              calib_anticogging: bool
+              calib_anticogging_b: bool
               calib_pos_threshold: float32
               calib_vel_threshold: float32
               cogging_ratio: readonly float32

@@ -33,7 +33,7 @@
         {
             "label": "openocd",
             "type": "shell",
-            "command": "openocd -f \"interface/stlink-v2.cfg\" -f \"target/stm32f4x_stlink.cfg\" -c \"gdb_port 3333; log_output openocd.log\"",
+            "command": "openocd -s \"/usr/share/openocd/scripts/\" -f \"interface/stlink.cfg\" -f \"target/stm32f4x.cfg\" -c \"gdb_port 3333; log_output openocd.log\"",
             "problemMatcher": []
         }
     ]

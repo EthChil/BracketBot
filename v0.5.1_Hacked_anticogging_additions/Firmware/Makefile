@@ -6,7 +6,7 @@ python = /home/brian/.pyenv/shims/python3
 BUILD_DIR = build
 FIRMWARE = $(BUILD_DIR)/ODriveFirmware.elf
 FIRMWARE_HEX = $(BUILD_DIR)/ODriveFirmware.hex
-OPENOCD := openocd -f interface/stlink-v2.cfg \
+OPENOCD := openocd -f interface/stlink.cfg \
 		$(if $(value PROGRAMMER),-c 'hla_serial $(PROGRAMMER)',) \
 		-f target/stm32f4x.cfg
 

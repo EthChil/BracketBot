@@ -1,12 +1,9 @@
 
+#include <algorithm>
+
 #include "odrive_main.h"
-#include <algorithm>
 
-#include <algorithm>
-
-Controller::Controller(Config_t& config) :
-    config_(config)
-{
+Controller::Controller(Config_t& config) : config_(config) {
     update_filter_gains();
 }
 
@@ -26,7 +23,6 @@ void Controller::set_error(Error error) {
 // Command Handling
 //--------------------------------
 
-
 bool Controller::select_encoder(size_t encoder_num) {
     if (encoder_num < AXIS_COUNT) {
         Axis* ax = axes[encoder_num];
@@ -44,17 +40,17 @@ bool Controller::select_encoder(size_t encoder_num) {
 
 void Controller::move_to_pos(float goal_point) {
     axis_->trap_traj_.planTrapezoidal(goal_point, pos_setpoint_, vel_setpoint_,
-                                 axis_->trap_traj_.config_.vel_limit,
-                                 axis_->trap_traj_.config_.accel_limit,
-                                 axis_->trap_traj_.config_.decel_limit);
+                                      axis_->trap_traj_.config_.vel_limit,
+                                      axis_->trap_traj_.config_.accel_limit,
+                                      axis_->trap_traj_.config_.decel_limit);
     axis_->trap_traj_.t_ = 0.0f;
     trajectory_done_ = false;
 }
 
-void Controller::move_incremental(float displacement, bool from_input_pos = true){
-    if(from_input_pos){
+void Controller::move_incremental(float displacement, bool from_input_pos = true) {
+    if (from_input_pos) {
         input_pos_ += displacement;
-    } else{
+    } else {
         input_pos_ = pos_setpoint_ + displacement;
     }
 
@@ -81,7 +77,7 @@ void Controller::start_anticogging_calibration_b() {
  * This anti-cogging implementation iterates through each encoder position,
  * waits for zero velocity & position error,
  * then samples the current required to maintain that position.
- * 
+ *
  * This holding current is added as a feedforward term in the control loop.
  */
 bool Controller::anticogging_calibration(float pos_estimate, float vel_estimate) {
@@ -134,13 +130,12 @@ bool Controller::anticogging_calibration_b(float pos_estimate, float vel_estimat
         config_.anticogging.calib_anticogging_b = false;
         return true;
     }
-
 }
 
 void Controller::update_filter_gains() {
     float bandwidth = std::min(config_.input_filter_bandwidth, 0.25f * current_meas_hz);
-    input_filter_ki_ = 2.0f * bandwidth;  // basic conversion to discrete time
-    input_filter_kp_ = 0.25f * (input_filter_ki_ * input_filter_ki_); // Critically damped
+    input_filter_ki_ = 2.0f * bandwidth;                               // basic conversion to discrete time
+    input_filter_kp_ = 0.25f * (input_filter_ki_ * input_filter_ki_);  // Critically damped
 }
 
 static float limitVel(const float vel_limit, const float vel_estimate, const float vel_gain, const float torque) {
@@ -151,11 +146,14 @@ static float limitVel(const float vel_limit, const float vel_estimate, const flo
 
 bool Controller::update(float* torque_setpoint_output) {
     float* pos_estimate_linear = (pos_estimate_valid_src_ && *pos_estimate_valid_src_)
-            ? pos_estimate_linear_src_ : nullptr;
+                                     ? pos_estimate_linear_src_
+                                     : nullptr;
     float* pos_estimate_circular = (pos_estimate_valid_src_ && *pos_estimate_valid_src_)
-            ? pos_estimate_circular_src_ : nullptr;
+                                       ? pos_estimate_circular_src_
+                                       : nullptr;
     float* vel_estimate_src = (vel_estimate_valid_src_ && *vel_estimate_valid_src_)
-            ? vel_estimate_src_ : nullptr;
+                                  ? vel_estimate_src_
+                                  : nullptr;
 
     // Calib_anticogging is only true when calibration is occurring, so we can't block anticogging_pos
     float anticogging_pos = axis_->encoder_.pos_estimate_ / axis_->encoder_.getCoggingRatio();
@@ -191,7 +189,7 @@ bool Controller::update(float* torque_setpoint_output) {
         case INPUT_MODE_PASSTHROUGH: {
             pos_setpoint_ = input_pos_;
             vel_setpoint_ = input_vel_;
-            torque_setpoint_ = input_torque_; 
+            torque_setpoint_ = input_torque_;
         } break;
         case INPUT_MODE_VEL_RAMP: {
             float max_step_size = std::abs(current_meas_period * config_.vel_ramp_rate);
@@ -210,12 +208,12 @@ bool Controller::update(float* torque_setpoint_output) {
         } break;
         case INPUT_MODE_POS_FILTER: {
             // 2nd order pos tracking filter
-            float delta_pos = input_pos_ - pos_setpoint_; // Pos error
-            float delta_vel = input_vel_ - vel_setpoint_; // Vel error
-            float accel = input_filter_kp_*delta_pos + input_filter_ki_*delta_vel; // Feedback
-            torque_setpoint_ = accel * config_.inertia; // Accel
-            vel_setpoint_ += current_meas_period * accel; // delta vel
-            pos_setpoint_ += current_meas_period * vel_setpoint_; // Delta pos
+            float delta_pos = input_pos_ - pos_setpoint_;                               // Pos error
+            float delta_vel = input_vel_ - vel_setpoint_;                               // Vel error
+            float accel = input_filter_kp_ * delta_pos + input_filter_ki_ * delta_vel;  // Feedback
+            torque_setpoint_ = accel * config_.inertia;                                 // Accel
+            vel_setpoint_ += current_meas_period * accel;                               // delta vel
+            pos_setpoint_ += current_meas_period * vel_setpoint_;                       // Delta pos
         } break;
         case INPUT_MODE_MIRROR: {
             if (config_.axis_to_mirror < AXIS_COUNT) {
@@ -230,14 +228,14 @@ bool Controller::update(float* torque_setpoint_output) {
         //     // NOT YET IMPLEMENTED
         // } break;
         case INPUT_MODE_TRAP_TRAJ: {
-            if(input_pos_updated_){
+            if (input_pos_updated_) {
                 move_to_pos(input_pos_);
                 input_pos_updated_ = false;
             }
             // Avoid updating uninitialized trajectory
             if (trajectory_done_)
                 break;
-            
+
             if (axis_->trap_traj_.t_ > axis_->trap_traj_.Tf_) {
                 // Drop into position control mode when done to avoid problems on loop counter delta overflow
                 config_.control_mode = CONTROL_MODE_POSITION_CONTROL;
@@ -252,13 +250,12 @@ bool Controller::update(float* torque_setpoint_output) {
                 torque_setpoint_ = traj_step.Ydd * config_.inertia;
                 axis_->trap_traj_.t_ += current_meas_period;
             }
-            anticogging_pos = pos_setpoint_; // FF the position setpoint instead of the pos_estimate
+            anticogging_pos = pos_setpoint_;  // FF the position setpoint instead of the pos_estimate
         } break;
         default: {
             set_error(ERROR_INVALID_INPUT_MODE);
             return false;
         }
-        
     }
 
     // Position control
@@ -269,7 +266,7 @@ bool Controller::update(float* torque_setpoint_output) {
         float pos_err;
 
         if (config_.circular_setpoints) {
-            if(!pos_estimate_circular) {
+            if (!pos_estimate_circular) {
                 set_error(ERROR_INVALID_ESTIMATE);
                 return false;
             }
@@ -279,7 +276,7 @@ bool Controller::update(float* torque_setpoint_output) {
             pos_err = pos_setpoint_ - *pos_estimate_circular;
             pos_err = wrap_pm(pos_err, 0.5f * *pos_wrap_src_);
         } else {
-            if(!pos_estimate_linear) {
+            if (!pos_estimate_linear) {
                 set_error(ERROR_INVALID_ESTIMATE);
                 return false;
             }
@@ -334,10 +331,9 @@ bool Controller::update(float* torque_setpoint_output) {
     // We get the current position and apply a current feed-forward
     // ensuring that we handle negative encoder positions properly (-1 == motor->encoder.encoder_cpr - 1)
     if (anticogging_valid_ && config_.anticogging.anticogging_enabled) {
-        if (torque > 0){
+        if (torque > 0) {
             torque += config_.anticogging.cogging_map[std::clamp(mod((int)anticogging_pos, 3600), 0, 3600)];
-        }
-        else {
+        } else {
             torque += config_.anticogging.cogging_map_b[std::clamp(mod((int)anticogging_pos, 3600), 0, 3600)];
         }
     }
