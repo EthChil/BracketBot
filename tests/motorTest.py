@@ -5,7 +5,7 @@ from odrive.enums import *
 import time
 import matplotlib.pyplot as plt
 import numpy as np
-import IMU_uncool
+import IMU
 
 
 from odriveDriver import Axis

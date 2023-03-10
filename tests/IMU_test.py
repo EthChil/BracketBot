@@ -1,9 +1,13 @@
-import IMU_uncool
+import sys
+sys.path.append('../')
+import IMU
 import IMU
 import time
 import matplotlib.pyplot as plt
+import math
 
-IMU = IMU_uncool.IMU(0, 40)
+
+IMU = IMU.IMU(0, 40)
 IMU.setupIMU()
 
 values = []
@@ -22,10 +26,15 @@ while (time.time() - stamp < 20):
     # print(f'{IMU.getWogma()[0]:.3f} | {IMU.getWogma()[1]:.3f} | {IMU.getWogma()[2]:.3f}')
     # print(IMU.getWogma()[0], )
 
-    angle = IMU.getAngle()
-    wogma = IMU.getWogma()
+    # angle = IMU.getAngle()
+    # wogma = IMU.getWogmaPitch()
+    # wogma_yaw = IMU.getWogmaYaw()
+    angleYaw = IMU.getYaw()
+
+
+
     # print(angle)
-    print(angle)
+    print(angleYaw)
 
     # values.append(angle[0])
     # valuesRaw1.append(angle[1])

@@ -4,15 +4,14 @@ from odrive.enums import *
 import time
 import matplotlib.pyplot as plt
 import numpy as np
-import IMU_uncool
-
+import IMU
 
 from odriveDriver import Axis
 plt.switch_backend('Agg')
 
 plot_dir = './plots/'
 
-IMU = IMU_uncool.IMU(0, 40)
+IMU = IMU.IMU(0, 40)
 IMU.setupIMU()
 
 odrv0 = odrive.find_any()
@@ -30,14 +29,11 @@ K = np.array([-3.1623,  -4.5965, -24.7847,  -8.8673]) #medium torques higher pos
 def LQR(axis0, axis1):
     # read initial values to offset
     x_init = axis0.get_pos_turns() * t2m
-    cur_theta = IMU.getAngle()
-    prev_theta = cur_theta
-    wogma = 0
-    prev_x = 0
 
-    # Initialize running weighted average filter for wogma
-    alpha = 1 # Weight of the new measurement (0 < alpha < 1)
-    wogma_filtered = wogma
+    pitch_angle=IMU.getPitchAngle() 
+    yaw_angle=IMU.getYawAngle()
+    pitch_rate=IMU.getPitchRate()
+    yaw_rate=IMU.getYawRate()
 
     Xf = np.array([0.0, 0.0, 0, 0])
 
@@ -51,10 +47,12 @@ def LQR(axis0, axis1):
     xs = []
     vs = []
     dxdts = []
-    cur_thetas = []
-    wogmas = []
-    filtered_wogmas = []
-    wogma_from_IMUs = []
+
+    pitchAngles = []
+    yawAngles = []
+    pitchRates = []
+    yawRates = []
+
     torque_commands = []
 
     while cur_time < 30:
@@ -72,18 +70,17 @@ def LQR(axis0, axis1):
 
         x = axis0.get_pos_turns() * t2m - x_init
         v = axis0.get_vel() * t2m
-        cur_theta = IMU.getAngle()
-        wogma = (cur_theta - prev_theta) / dt
-        wogma_filtered = alpha * wogma + (1 - alpha) * wogma_filtered
 
-        wogma_from_IMU = IMU.getWogma()
-        
+        pitch_angle=IMU.getPitchAngle() 
+        yaw_angle=IMU.getYawAngle()
+        pitch_rate=IMU.getPitchRate()
+        yaw_rate=IMU.getYawRate()
 
-        X = np.array([x, v, cur_theta, wogma_from_IMU])
+        X = np.array([x, v, pitch, pitch_rate])
 
         U = -K @ (X - Xf)
 
-        torque_command = U / 2 # if (U / 2) < 3 else 3
+        torque_command = U / 2
 
         axis0.set_trq(torque_command)
         axis1.set_trq(torque_command)
@@ -93,21 +90,18 @@ def LQR(axis0, axis1):
         xs.append(x)
         vs.append(v)
         dxdts.append((x - prev_x) / dt)
-        cur_thetas.append(cur_theta)
-        wogmas.append(wogma)
-        filtered_wogmas.append(wogma_filtered)
-        wogma_from_IMUs.append(wogma_from_IMU)
-    
+
+        pitchAngles.append(pitch)
+        yawAngles.append(yaw)
+        pitchRates.append(pitch_rate)
+        yawRates.append(yaw_rate)
+
         torque_commands.append(torque_command)
 
-        prev_theta = cur_theta
         prev_time = cur_time
         prev_x = x
 
     brake_both_motors(a0, a1)
-
-
-
 
     fig, axs = plt.subplots(nrows=9, ncols=1, figsize=(8, 16))
 
@@ -132,24 +126,24 @@ def LQR(axis0, axis1):
     axs[3].set_title("dxdts")
 
     # Plot 5
-    axs[4].plot(times, cur_thetas, label='cur_thetas')
+    axs[4].plot(times, pitchAngles, label='Pitch Angles')
     axs[4].legend()
-    axs[4].set_title("cur_thetas")
+    axs[4].set_title("Pitch Angles")
 
     # Plot 6
-    axs[5].plot(times, wogmas, label='wogmas')
+    axs[5].plot(times, pitchRates, label='pitch rates')
     axs[5].legend()
-    axs[5].set_title("wogmas")
+    axs[5].set_title("pitch rates")
 
     # Plot 7
-    axs[6].plot(times, filtered_wogmas, label='filtered_wogmas')
+    axs[6].plot(times, yawAngles, label='Yaw Angles')
     axs[6].legend()
-    axs[6].set_title("filtered_wogmas")
+    axs[6].set_title("Yaw Angles")
 
     # Plot 7
-    axs[7].plot(times, wogma_from_IMUs, label='IMU wogma')
+    axs[7].plot(times, yawRates, label='Yaw Rates')
     axs[7].legend()
-    axs[7].set_title("IMU wogmas")
+    axs[7].set_title("Yaw Rates")
 
     axs[8].plot(times, torque_commands, label='torque')
     axs[8].legend()
