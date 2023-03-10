@@ -8,6 +8,8 @@ public:
         float cogging_map_f[3600];
         float cogging_map_b[3600];
         bool pre_calibrated = false;
+        bool calibration_done_f = false;
+        bool calibration_done_b = false;
         bool calib_anticogging_f = false;
         bool calib_anticogging_b = false;
         float calib_pos_threshold = 1.0f;

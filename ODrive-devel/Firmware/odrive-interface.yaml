@@ -1148,6 +1148,8 @@ interfaces:
             attributes:
               index: readonly uint32
               pre_calibrated: bool
+              calibration_done_f: readonly bool
+              calibration_done_b: readonly bool
               calib_anticogging_f: bool
               calib_anticogging_b: bool
               calib_pos_threshold: float32

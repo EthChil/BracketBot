@@ -50,6 +50,7 @@ void Controller::move_incremental(float displacement, bool from_input_pos = true
 void Controller::start_anticogging_calibration_f() {
     // Ensure the cogging map was correctly allocated earlier and that the motor is capable of calibrating
     if (axis_->error_ == Axis::ERROR_NONE) {
+        config_.anticogging.index = 0;
         config_.anticogging.calib_anticogging_f = true;
     }
 }
@@ -57,6 +58,7 @@ void Controller::start_anticogging_calibration_f() {
 void Controller::start_anticogging_calibration_b() {
     // Ensure the cogging map was correctly allocated earlier and that the motor is capable of calibrating
     if (axis_->error_ == Axis::ERROR_NONE) {
+        config_.anticogging.index = 3600;
         config_.anticogging.calib_anticogging_b = true;
     }
 }
@@ -103,6 +105,7 @@ bool Controller::anticogging_calibration_f(float pos_estimate, float vel_estimat
         input_vel_ = 0.0f;
         input_torque_ = 0.0f;
         input_pos_updated();
+        config_.anticogging.calibration_done_f = true;
         anticogging_valid_ = true;
         config_.anticogging.calib_anticogging_f = false;
         return true;
@@ -113,9 +116,9 @@ bool Controller::anticogging_calibration_b(float pos_estimate, float vel_estimat
     float pos_err = input_pos_ - pos_estimate;
     if (std::abs(pos_err) <= config_.anticogging.calib_pos_threshold / (float)axis_->encoder_.config_.cpr &&
         std::abs(vel_estimate) < config_.anticogging.calib_vel_threshold / (float)axis_->encoder_.config_.cpr) {
-        config_.anticogging.cogging_map_b[std::clamp<uint32_t>(config_.anticogging.index++, 0, 3600)] = vel_integrator_torque_;
+        config_.anticogging.cogging_map_b[std::clamp<uint32_t>(config_.anticogging.index--, 0, 3600)] = vel_integrator_torque_;
     }
-    if (config_.anticogging.index < 3600) {
+    if (config_.anticogging.index > 0) {
         config_.control_mode = CONTROL_MODE_POSITION_CONTROL;
         input_pos_ = config_.anticogging.index * axis_->encoder_.getCoggingRatio();
         input_vel_ = 0.0f;
@@ -129,6 +132,7 @@ bool Controller::anticogging_calibration_b(float pos_estimate, float vel_estimat
         input_vel_ = 0.0f;
         input_torque_ = 0.0f;
         input_pos_updated();
+        config_.anticogging.calibration_done_b = true;
         anticogging_valid_ = true;
         config_.anticogging.calib_anticogging_b = false;
         return true;
@@ -410,10 +414,10 @@ bool Controller::update() {
         }
         float anticogging_pos = *anticogging_pos_estimate / axis_->encoder_.getCoggingRatio();
         if(torque < 0){
-            torque += config_.anticogging.cogging_map_f[std::clamp(mod((int)anticogging_pos, 3600), 0, 3600)];
+            torque += config_.anticogging.cogging_map_b[std::clamp(mod((int)anticogging_pos, 3600), 0, 3600)];
         }
         else {
-            torque += config_.anticogging.cogging_map_b[std::clamp(mod((int)anticogging_pos, 3600), 0, 3600)];
+            torque += config_.anticogging.cogging_map_f[std::clamp(mod((int)anticogging_pos, 3600), 0, 3600)];
         }
 
     }
