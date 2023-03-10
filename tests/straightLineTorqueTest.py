@@ -6,7 +6,7 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 import IMU
-import odriveDriver
+from odriveDriver import Axis
 
 
 plt.switch_backend('Agg')
@@ -33,8 +33,9 @@ def straight_accel_test(axis0, axis1, torque_set=0):
     axis0.setup()
     axis1.setup()
 
-    axis0.trq_set(torque_set)
-    axis1.trq_set(torque_set)
+    ref_time = time.time()
+    axis0.set_trq(torque_set)
+    axis1.set_trq(torque_set)
 
     #turns -> meters constant
     t2m = 0.528
@@ -60,7 +61,7 @@ def straight_accel_test(axis0, axis1, torque_set=0):
     vels_axis0 = []
     vels_axis1 = []
 
-    while cur_pos_axis0 < 2:
+    while cur_pos_axis0 < 1:
         print(cur_pos_axis0, cur_pos_axis1)
         cur_time = time.time() - ref_time
         cur_vel_axis0 = axis0.get_vel()
@@ -180,8 +181,19 @@ def plot_torques(axis):
 def brake_both_motors(axis0, axis1):
 
     while abs(axis0.get_vel()) > 0.05 and abs(axis1.get_vel()) > 0.05:
-        axis0.trq_set(-0.5 if axis0.get_vel() > 0 else 0.5)
-        axis1.trq_set(-0.5 if axis1.get_vel() > 0 else 0.5)
+        axis0.set_trq(-0.5 if axis0.get_vel() > 0 else 0.5)
+        axis1.set_trq(-0.5 if axis1.get_vel() > 0 else 0.5)
         
-    axis0.trq_set(0)
-    axis1.trq_set(0)
+    axis0.set_trq(0)
+    axis1.set_trq(0)
+
+
+a0 = Axis(odrv0.axis0, dir=1)
+a1 = Axis(odrv0.axis1, dir=-1)
+
+a0.setup()
+a1.setup()
+
+a0.set_trq(0.0)
+
+straight_accel_test(a0, a1, torque_set=0.3)

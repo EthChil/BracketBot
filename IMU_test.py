@@ -25,7 +25,7 @@ while (time.time() - stamp < 20):
     angle = IMU.getAngle()
     wogma = IMU.getWogma()
     # print(angle)
-    print(wogma)
+    print(angle)
 
     # values.append(angle[0])
     # valuesRaw1.append(angle[1])

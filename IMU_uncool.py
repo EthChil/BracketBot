@@ -240,7 +240,7 @@ class IMU:
 
     # def getWogmaPole(self):
     def getAngle(self):
-        adjust = -0.015 #degrees
+        adjust = -0.017#rads
 
         vec = self.getGravityVector()
         print(vec)

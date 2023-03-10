@@ -57,11 +57,16 @@ def LQR(axis0, axis1):
     wogma_from_IMUs = []
     torque_commands = []
 
-    while cur_time < 10:
+    while cur_time < 30:
+        time.sleep(0.001)
+
         # if cur_time > 3:
         #     Xf = np.array([0.0 + (cur_time-3)*0.2, 0.0, 0, 0])
 
-        time.sleep(0.001)
+        #stop the program if the vel gets super high
+        if abs(axis0.get_vel()) > 2:
+            break
+
         cur_time = time.time() - start_time # relative time starts at 0
         dt = cur_time - prev_time
 
@@ -69,9 +74,10 @@ def LQR(axis0, axis1):
         v = axis0.get_vel() * t2m
         cur_theta = IMU.getAngle()
         wogma = (cur_theta - prev_theta) / dt
+        wogma_filtered = alpha * wogma + (1 - alpha) * wogma_filtered
+
         wogma_from_IMU = IMU.getWogma()
         
-        wogma_filtered = alpha * wogma + (1 - alpha) * wogma_filtered
 
         X = np.array([x, v, cur_theta, wogma_from_IMU])
 
@@ -165,7 +171,7 @@ def brake_both_motors(axis0, axis1):
     axis1.set_trq(0)
 
         
-a0 = Axis(odrv0.axis0)
+a0 = Axis(odrv0.axis0, dir=1)
 a1 = Axis(odrv0.axis1, dir=-1)
 
 a0.setup()

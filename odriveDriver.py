@@ -15,7 +15,7 @@ class Axis:
 
         # print(f"{self.axis} encoder is indexed")
         self.axis.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-        self.axis.controller.input_vel = 0
+        # self.axis.controller.input_vel = 0
         self.axis.controller.input_torque = 0
 
         self.set_trq()
@@ -36,11 +36,13 @@ class Axis:
         self.axis.controller.input_vel = v * self.dir
 
     def set_trq(self, t=0):
+        self.axis.controller.config.input_mode = 1
         if self.axis.controller.config.control_mode != CONTROL_MODE_TORQUE_CONTROL:
             self.axis.controller.config.control_mode = CONTROL_MODE_TORQUE_CONTROL
             print("changed to torque control")
-        
+
         self.axis.controller.input_torque = t * self.dir
+
 
     def stop(self):
         self.axis.controller.config.control_mode = CONTROL_MODE_TORQUE_CONTROL
@@ -84,7 +86,7 @@ class Axis:
         return self.axis.encoder.pos_estimate * self.dir#turns
 
     def accel_test(self):
-        self.trq_set(1)
+        self.trq_set(0.5)
 
         ref_time = time.time()
 
