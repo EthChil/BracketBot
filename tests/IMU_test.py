@@ -35,7 +35,7 @@ while (time.time() - stamp < 200):
 
 
     # print(angle)
-    print(anglePitch)
+    print(anglePitch, angleYaw)
 
     # values.append(angle[0])
     # valuesRaw1.append(angle[1])

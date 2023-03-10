@@ -21,9 +21,11 @@ t2m = 0.528 #turns to meters
 
 
 
-K = np.array([-3.1623,  -4.4213, -28.1290,  -8.7088]) #New dynamimcs ones
-
-
+# K = np.array([[-3.1623,  -4.4213, -28.1290,  -8.7088, 0, 0], [0,0,0,0,1,1.2749]]) #New dynamimcs ones
+# K = np.array([[-1.0000, -2.0620, -21.0476, -6.6199, -0.0000, 0.0000], [0.0000, 0.0000, 0.0000, 0.0000, 1.0000, 1.2749]]) #swapped Q's
+# K = np.array([[-10.0000, -10.6250, -45.9842, -13.8316, -0.0000, -0.0000], [0.0000, 0.0000, 0.0000, 0.0000, 3.1623, 2.4132]]) #stronger R's set to 1
+# K = np.array([[-4.4721, -5.7066, -31.9805, -9.8143, -0.0000, -0.0000], [0.0000, 0.0000, 0.0000, 0.0000, 1.4142, 1.5353]]) #strogner R's  set to 5
+K = np.array([[-5.77, -6.92, -35.52, -10.83, -0.00, 0.00],[-0.00, -0.00, -0.00, 0.00, 1.83, 1.77]]) #stronger R's set to 3
 
 
 
@@ -36,7 +38,7 @@ def LQR(axis0, axis1):
     pitch_rate=IMU.getPitchRate()
     yaw_rate=IMU.getYawRate()
 
-    Xf = np.array([0.0, 0.0, 0, 0])
+    Xf = np.array([0.5, 0, 0, 0, 0, 0])
 
     start_time = time.time()
     cur_time = time.time() - start_time
@@ -54,7 +56,8 @@ def LQR(axis0, axis1):
     pitchRates = []
     yawRates = []
 
-    torque_commands = []
+    Cl_commands = []
+    Cr_commands = []
 
     while cur_time < 30:
         time.sleep(0.001)
@@ -63,7 +66,7 @@ def LQR(axis0, axis1):
         #     Xf = np.array([0.0 + (cur_time-3)*0.2, 0.0, 0, 0])
 
         #stop the program if the vel gets super high
-        if abs(axis0.get_vel()) > 2:
+        if abs(axis0.get_vel()) > 3:
             break
 
         cur_time = time.time() - start_time # relative time starts at 0
@@ -75,16 +78,18 @@ def LQR(axis0, axis1):
         pitch_angle=IMU.getPitchAngle() 
         yaw_angle=IMU.getYawAngle()
         pitch_rate=-IMU.getPitchRate()
-        yaw_rate=IMU.getYawRate()
+        yaw_rate=-IMU.getYawRate()
 
-        X = np.array([x, v, pitch_angle, pitch_rate])
+        X = np.array([x, v, pitch_angle, pitch_rate, yaw_angle, yaw_rate])
 
         U = -K @ (X - Xf)
 
-        torque_command = U / 2
+        D = np.array([[0.5, 0.5],[0.5, -0.5]])
+        Cl, Cr = D @ (-K @ (X - Xf))
 
-        axis0.set_trq(torque_command)
-        axis1.set_trq(torque_command)
+
+        axis0.set_trq(Cl)
+        axis1.set_trq(Cr)
 
         times.append(cur_time)
         dts.append(dt)
@@ -96,13 +101,14 @@ def LQR(axis0, axis1):
         pitchRates.append(pitch_rate)
         yawRates.append(yaw_rate)
 
-        torque_commands.append(torque_command)
+        Cl_commands.append(Cl)
+        Cr_commands.append(Cr)
 
         prev_time = cur_time
 
     brake_both_motors(a0, a1)
 
-    fig, axs = plt.subplots(nrows=9, ncols=1, figsize=(8, 16))
+    fig, axs = plt.subplots(nrows=8, ncols=1, figsize=(8, 16))
 
     # Plot 1
     axs[0].plot(times, dts, label='dts')
@@ -120,28 +126,29 @@ def LQR(axis0, axis1):
     axs[2].set_title("vs")
 
     # Plot 5
-    axs[4].plot(times, pitchAngles, label='Pitch Angles')
-    axs[4].legend()
-    axs[4].set_title("Pitch Angles")
+    axs[3].plot(times, pitchAngles, label='Pitch Angles')
+    axs[3].legend()
+    axs[3].set_title("Pitch Angles")
 
     # Plot 6
-    axs[5].plot(times, pitchRates, label='pitch rates')
+    axs[4].plot(times, pitchRates, label='pitch rates')
+    axs[4].legend()
+    axs[4].set_title("pitch rates")
+
+    # Plot 7
+    axs[5].plot(times, yawAngles, label='Yaw Angles')
     axs[5].legend()
-    axs[5].set_title("pitch rates")
+    axs[5].set_title("Yaw Angles")
 
     # Plot 7
-    axs[6].plot(times, yawAngles, label='Yaw Angles')
+    axs[6].plot(times, yawRates, label='Yaw Rates')
     axs[6].legend()
-    axs[6].set_title("Yaw Angles")
+    axs[6].set_title("Yaw Rates")
 
-    # Plot 7
-    axs[7].plot(times, yawRates, label='Yaw Rates')
+    axs[7].plot(times, Cl_commands, label='torque right')
+    axs[7].plot(times, Cr_commands, label='torque left')
     axs[7].legend()
-    axs[7].set_title("Yaw Rates")
-
-    axs[8].plot(times, torque_commands, label='torque')
-    axs[8].legend()
-    axs[8].set_title("Balance Torque")
+    axs[7].set_title("Balance Torques")
 
     plt.tight_layout()
     plt.savefig(plot_dir+ "balance_plots.png")
