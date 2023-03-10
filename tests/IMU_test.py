@@ -20,7 +20,7 @@ plot_dir = './plots/'
 plt.switch_backend('Agg')
 
 stamp = time.time()
-while (time.time() - stamp < 20):
+while (time.time() - stamp < 200):
     time.sleep(0.005)
     # print(IMU.getAngleCompRads())
     # print(f'{IMU.getWogma()[0]:.3f} | {IMU.getWogma()[1]:.3f} | {IMU.getWogma()[2]:.3f}')
@@ -29,12 +29,13 @@ while (time.time() - stamp < 20):
     # angle = IMU.getAngle()
     # wogma = IMU.getWogmaPitch()
     # wogma_yaw = IMU.getWogmaYaw()
-    angleYaw = IMU.getYaw()
+    angleYaw = IMU.getYawAngle()
+    anglePitch = IMU.getPitchAngle()
 
 
 
     # print(angle)
-    print(angleYaw)
+    print(anglePitch)
 
     # values.append(angle[0])
     # valuesRaw1.append(angle[1])

@@ -19,11 +19,12 @@ odrv0 = odrive.find_any()
 ref_time = time.time()
 t2m = 0.528 #turns to meters
 
-# K = np.array([-31.6228, -30.5921, -92.5864, -32.4303])
-# K = np.array([-10.0000, -11.3648, -43.2605, -15.2819]) #working ones
-# K = np.array([-31.6228, -30.5921, -92.5864, -32.4303])
-# K = np.array([-1.0000,  -2.0552, -17.2178,  -6.2506]) #smaller torques
-K = np.array([-3.1623,  -4.5965, -24.7847,  -8.8673]) #medium torques higher position objective
+
+
+K = np.array([-3.1623,  -4.4213, -28.1290,  -8.7088]) #New dynamimcs ones
+
+
+
 
 
 def LQR(axis0, axis1):
@@ -73,10 +74,10 @@ def LQR(axis0, axis1):
 
         pitch_angle=IMU.getPitchAngle() 
         yaw_angle=IMU.getYawAngle()
-        pitch_rate=IMU.getPitchRate()
+        pitch_rate=-IMU.getPitchRate()
         yaw_rate=IMU.getYawRate()
 
-        X = np.array([x, v, pitch, pitch_rate])
+        X = np.array([x, v, pitch_angle, pitch_rate])
 
         U = -K @ (X - Xf)
 
@@ -89,17 +90,15 @@ def LQR(axis0, axis1):
         dts.append(dt)
         xs.append(x)
         vs.append(v)
-        dxdts.append((x - prev_x) / dt)
 
-        pitchAngles.append(pitch)
-        yawAngles.append(yaw)
+        pitchAngles.append(pitch_angle)
+        yawAngles.append(yaw_angle)
         pitchRates.append(pitch_rate)
         yawRates.append(yaw_rate)
 
         torque_commands.append(torque_command)
 
         prev_time = cur_time
-        prev_x = x
 
     brake_both_motors(a0, a1)
 
@@ -119,11 +118,6 @@ def LQR(axis0, axis1):
     axs[2].plot(times, vs, label='vs')
     axs[2].legend()
     axs[2].set_title("vs")
-
-    # Plot 4
-    axs[3].plot(times, dxdts, label='dxdts')
-    axs[3].legend()
-    axs[3].set_title("dxdts")
 
     # Plot 5
     axs[4].plot(times, pitchAngles, label='Pitch Angles')

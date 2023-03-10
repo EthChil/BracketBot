@@ -162,7 +162,7 @@ class IMU:
 
     # calculate angle based on the angle of the gravity vector and a trim value for what it is while balanced
     def getPitchAngle(self):
-        adjust = -0.017#rads
+        adjust = -0.016#rads
 
         vec = self.getGravityVector()
 
