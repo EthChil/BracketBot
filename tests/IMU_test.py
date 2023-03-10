@@ -21,7 +21,7 @@ plt.switch_backend('Agg')
 
 stamp = time.time()
 while (time.time() - stamp < 200):
-    time.sleep(0.005)
+    time.sleep(0.1)
     # print(IMU.getAngleCompRads())
     # print(f'{IMU.getWogma()[0]:.3f} | {IMU.getWogma()[1]:.3f} | {IMU.getWogma()[2]:.3f}')
     # print(IMU.getWogma()[0], )
@@ -35,7 +35,7 @@ while (time.time() - stamp < 200):
 
 
     # print(angle)
-    print(anglePitch, angleYaw)
+    print(angleYaw)
 
     # values.append(angle[0])
     # valuesRaw1.append(angle[1])

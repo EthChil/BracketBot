@@ -5,6 +5,12 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 import IMU
+from sshkeyboard import listen_keyboard
+from threading import Thread
+from queue import Queue
+
+queue = Queue()
+
 
 from odriveDriver import Axis
 plt.switch_backend('Agg')
@@ -19,18 +25,47 @@ odrv0 = odrive.find_any()
 ref_time = time.time()
 t2m = 0.528 #turns to meters
 
-
-
-# K = np.array([[-3.1623,  -4.4213, -28.1290,  -8.7088, 0, 0], [0,0,0,0,1,1.2749]]) #New dynamimcs ones
-# K = np.array([[-1.0000, -2.0620, -21.0476, -6.6199, -0.0000, 0.0000], [0.0000, 0.0000, 0.0000, 0.0000, 1.0000, 1.2749]]) #swapped Q's
-# K = np.array([[-10.0000, -10.6250, -45.9842, -13.8316, -0.0000, -0.0000], [0.0000, 0.0000, 0.0000, 0.0000, 3.1623, 2.4132]]) #stronger R's set to 1
-# K = np.array([[-4.4721, -5.7066, -31.9805, -9.8143, -0.0000, -0.0000], [0.0000, 0.0000, 0.0000, 0.0000, 1.4142, 1.5353]]) #strogner R's  set to 5
 K = np.array([[-5.77, -6.92, -35.52, -10.83, -0.00, 0.00],[-0.00, -0.00, -0.00, 0.00, 1.83, 1.77]]) #stronger R's set to 3
+Xf = np.array([0, 0, 0, 0, 0, 0],dtype=np.float64)
 
+def press(key):
+    if key == 'w':
+        queue.put(np.array([0.1, 0, 0, 0, 0, 0], dtype=np.float64))
+        print("W Pressed, 0.1m forward")
+    elif key == 's':
+        queue.put(np.array([-0.1, 0, 0, 0, 0, 0], dtype=np.float64))
+        print("S Pressed, 0.1m backward")
+    elif key == 'a':
+        queue.put(np.array([0, 0, 0, 0, 0, -0.5], dtype=np.float64))
+        print("A Pressed, 0.5rad left")
+    elif key == 'd':
+        queue.put(np.array([0, 0, 0, 0, 0, 0.5], dtype=np.float64))
+        print("D Pressed, 0.5rad right")
+    print(f"'{key}' pressed")
 
+def update_Xf():
+    global Xf
+    while True:
+        # Get the next update from the queue and add it to Xf
+        update = queue.get()
+        Xf += update
+
+def release(key):
+    print(f"'{key}' released")
+
+def keyboard_listener():
+    listen_keyboard(on_press=press)
+
+keyboard_thread = Thread(target=keyboard_listener)
+keyboard_thread.start()
+
+# Start the Xf update thread
+update_thread = Thread(target=update_Xf)
+update_thread.start()
 
 def LQR(axis0, axis1):
     # read initial values to offset
+    global Xf
     x_init = axis0.get_pos_turns() * t2m
 
     pitch_angle=IMU.getPitchAngle() 
@@ -38,7 +73,7 @@ def LQR(axis0, axis1):
     pitch_rate=IMU.getPitchRate()
     yaw_rate=IMU.getYawRate()
 
-    Xf = np.array([0.5, 0, 0, 0, 0, 0])
+    # Xf = np.array([0, 0, 0, 0, 0, 0])
 
     start_time = time.time()
     cur_time = time.time() - start_time
@@ -59,14 +94,15 @@ def LQR(axis0, axis1):
     Cl_commands = []
     Cr_commands = []
 
-    while cur_time < 30:
+    while cur_time < 60:
         time.sleep(0.001)
 
+
         # if cur_time > 3:
-        #     Xf = np.array([0.0 + (cur_time-3)*0.2, 0.0, 0, 0])
+        #     Xf = np.array([0, 0, 0, 0, 0.0 + (cur_time-3)*0.5, 0])
 
         #stop the program if the vel gets super high
-        if abs(axis0.get_vel()) > 3:
+        if abs(axis0.get_vel()) > 2:
             break
 
         cur_time = time.time() - start_time # relative time starts at 0

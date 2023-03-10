@@ -1,6 +1,7 @@
 import time
 from smbus2 import SMBus
 import math
+import numpy as np
 
 maxI2CBusses = 2
 
@@ -13,6 +14,11 @@ class IMU:
         self.maxData = maxData
         self.chipAdd = chipAdd
 
+        #for wrapping yaw:
+        self.continuous_angle = 0
+        self.prev_angle = 0
+        self.wraps = 0
+
         if (bus > maxI2CBusses or bus < 0):
             print("Error attempting to access I2C bus out of range")
 
@@ -21,6 +27,8 @@ class IMU:
             self.bus = SMBus(bus)
         except:
             print("Failed to open I2C SMBus on port " + str(bus))
+
+    
 
     # generic I2C access function for reading
     def readByte(self, offset):
@@ -137,6 +145,9 @@ class IMU:
                 self.twosComp(rawY, 16)/100, 
                 self.twosComp(rawZ, 16)/100]
 
+
+
+
     # get relative yaw angle from start, in documentation this is the eularian using a fusion combination of accelerometer and gyro
     def getYawAngle(self):
         if(not self.setup):
@@ -154,11 +165,21 @@ class IMU:
         # units are in rad
         yaw = self.twosComp(rawX, 16)/900
 
-        # returned as units of rad
-        if yaw > math.pi:
-            return yaw - 2*math.pi
-        else:
-            return yaw
+        #goes from 0 -> 360 +ve, and 0 -> -360 -ve
+
+        norm = math.atan2(math.sin(yaw), math.cos(yaw))
+
+        if norm - self.prev_angle > math.pi:
+            self.wraps -= 1
+        elif self.prev_angle - norm > math.pi:
+            self.wraps += 1
+
+        self.prev_angle = norm
+        self.continuous_angle = norm + 2*math.pi*self.wraps
+
+        return self.continuous_angle
+
+
 
     # calculate angle based on the angle of the gravity vector and a trim value for what it is while balanced
     def getPitchAngle(self):
