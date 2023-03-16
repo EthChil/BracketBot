@@ -27,15 +27,16 @@ while (time.time() - stamp < 200):
     # print(IMU.getWogma()[0], )
 
     # angle = IMU.getAngle()
-    # wogma = IMU.getWogmaPitch()
+    wogma = IMU.getPitchRate()
     # wogma_yaw = IMU.getWogmaYaw()
     angleYaw = IMU.getYawAngle()
     anglePitch = IMU.getPitchAngle()
 
 
 
-    # print(angle)
-    print(angleYaw)
+    # print(anglePitch)
+    # print(angleYaw)
+    print(wogma)
 
     # values.append(angle[0])
     # valuesRaw1.append(angle[1])
