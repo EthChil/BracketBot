@@ -9,15 +9,17 @@ class IMU:
     setup = 0
 
     # initialize the IMU by opening the I2C connection and 
-    def __init__(self, bus, chipAdd, maxAddress=106, maxData=255):
+    def __init__(self, bus, chipAdd, maxAddress=0x106, maxData=255):
         self.maxAddr = maxAddress
         self.maxData = maxData
         self.chipAdd = chipAdd
 
         #for wrapping yaw:
-        self.continuous_angle = 0
         self.prev_angle = 0
         self.wraps = 0
+
+        #yaw start offset
+        self.yaw_start_angle = 0.0
 
         if (bus > maxI2CBusses or bus < 0):
             print("Error attempting to access I2C bus out of range")
@@ -110,10 +112,13 @@ class IMU:
         time.sleep(0.5)
         print("0x3d 0c")
         print(self.readByte(0x80))
-
+        
         time.sleep(0.5)
 
         self.setup = 1
+        self.yaw_start_angle = self.getYawAngle()
+
+
 
     # get gravity vector only available in fusion modes
     def getGravityVector(self):
@@ -162,12 +167,11 @@ class IMU:
         XLSB = self.readByte(0x1A)
         rawX = (XMSB<<8) + XLSB
 
-        # units are in rad
-        yaw = self.twosComp(rawX, 16)/900
+        # units are in rad from 0 -> 2pi
+        yaw = (self.twosComp(rawX, 16)/900)
 
-        #goes from 0 -> 360 +ve, and 0 -> -360 -ve
-
-        norm = math.atan2(math.sin(yaw), math.cos(yaw))
+        #measured in radians this will go from -pi to +pi
+        norm = math.atan2(math.sin(yaw), math.cos(yaw)) - self.yaw_start_angle
 
         if norm - self.prev_angle > math.pi:
             self.wraps -= 1
@@ -175,15 +179,15 @@ class IMU:
             self.wraps += 1
 
         self.prev_angle = norm
-        self.continuous_angle = norm + 2*math.pi*self.wraps
+        continuous_angle = norm + 2*math.pi*self.wraps
 
-        return self.continuous_angle
+        return continuous_angle
 
 
 
     # calculate angle based on the angle of the gravity vector and a trim value for what it is while balanced
     def getPitchAngle(self):
-        adjust = -0.016#rads
+        adjust = -0.024484901760193828#rads
 
         vec = self.getGravityVector()
 
