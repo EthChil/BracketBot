@@ -101,16 +101,24 @@ class IMU:
         #Set operation mode in OPR_MODE (this should be NDOF)
         #sensor fusion modes
         # 0c for NDOF
+        #8 for IMU
         # 7 for AMG mercedes
+        # C for NDOF
         self.writeByte(0x3D, 0x08)
         time.sleep(0.5)
-        print("0x3d 0c")
+        print("0x3d 08")
         print(self.readByte(0x3D))
 
-        #Seet UNIT_SEL (m/s^2 RPS Centigrade)
+        #Set UNIT_SEL (m/s^2 RPS Centigrade)
         self.writeByte(0x80, 0x07)
         time.sleep(0.5)
-        print("0x3d 0c")
+        print("0x80 07")
+        print(self.readByte(0x80))
+
+        #Set ACC_CONFIG to 2g
+        self.writeByte(0x08, 0b1100)
+        time.sleep(0.5)
+        print("0x08 0C")
         print(self.readByte(0x80))
         
         time.sleep(0.5)
@@ -118,6 +126,42 @@ class IMU:
         self.setup = 1
         self.yaw_start_angle = self.getYawAngle()
 
+
+    def getCalibStatus(self):
+        stat = self.readByte(0x35)
+        return {"Accelerometer" : (stat >> 2) & 0b11 > 0, "Gyro" : (stat >> 4) & 0b11 > 0, "Magnetometer" : stat & 0b11 > 0, "System" : (stat >> 6) & 0b11 > 0}
+    
+    def saveCalibrationConstants(self):
+        if(not self.getCalibStatus()["System"]):
+            print("Calibrate fully before saving profile")
+            return
+
+        self.writeByte(0x3D, 0x00)
+        time.sleep(0.5)
+        print("Entering Config Mode")
+
+        calibrationValues = []
+
+        for i in range(0x55, 0x6A, 0x01):
+            calibrationValues.append(self.readByte(i))
+
+        self.writeByte(0x3D, 0x08)
+        time.sleep(0.5)
+        print("Exiting Config Mode")
+        return calibrationValues
+    
+    def restoreCalibrationConstants(self, calibrationValues):
+        self.writeByte(0x3D, 0x00)
+        time.sleep(0.5)
+        print("Entering Config Mode")
+
+        calibrationStep = 0
+        for i in range(0x55, 0x6A, 0x01):
+            self.writeByte(i, calibrationValues[calibrationStep])
+
+        self.writeByte(0x3D, 0x08)
+        time.sleep(0.5)
+        print("Exiting Config Mode")
 
 
     # get gravity vector only available in fusion modes
@@ -165,10 +209,16 @@ class IMU:
 
         XMSB = self.readByte(0x1B)
         XLSB = self.readByte(0x1A)
-        rawX = (XMSB<<8) + XLSB
+        rawX = self.twosComp((XMSB<<8) + XLSB, 16)/900
+        YMSB = self.readByte(0x1D)
+        YLSB = self.readByte(0x1C)
+        rawY = self.twosComp((YMSB<<8) + YLSB, 16)/900
+        ZMSB = self.readByte(0x1F)
+        ZLSB = self.readByte(0x1E)
+        rawZ = self.twosComp((ZMSB<<8) + ZLSB, 16)/900
 
         # units are in rad from 0 -> 2pi
-        yaw = (self.twosComp(rawX, 16)/900)
+        yaw = rawX
 
         #measured in radians this will go from -pi to +pi
         norm = math.atan2(math.sin(yaw), math.cos(yaw)) - self.yaw_start_angle
@@ -187,16 +237,15 @@ class IMU:
 
     # calculate angle based on the angle of the gravity vector and a trim value for what it is while balanced
     def getPitchAngle(self):
-        adjust = -0.024484901760193828#rads
+        # adjust = -0.007142735669418479#rads
+        # adjust = -0.11494284164306612
+        adjust = -0.10796626140477657
 
-        vec = self.getGravityVector()
+        referenceAxis = np.array([1, 0, 0]) # for top mount
 
-        nega = 0
-        if(vec[2] < 0):
-            nega = 1
-        else:
-            nega = -1
-        return (math.acos(vec[1]/math.sqrt(math.pow(vec[1], 2) + math.pow(vec[2], 2))))*nega + adjust
+        vec = np.array(self.getGravityVector())
+
+        return (math.acos(np.dot(referenceAxis, vec)/(np.linalg.norm(referenceAxis)*np.linalg.norm(vec)))) + adjust
 
     # gyro pitch rate
     def getPitchRate(self):
@@ -218,7 +267,7 @@ class IMU:
                 self.twosComp((YMSB<<8) + YLSB, 16)/900,
                 self.twosComp((ZMSB<<8) + ZLSB, 16)/900]
 
-        return vec[2]
+        return vec[0]
 
     # gyro yaw rate
     def getYawRate(self):
@@ -240,5 +289,5 @@ class IMU:
                 self.twosComp((YMSB<<8) + YLSB, 16)/900,
                 self.twosComp((ZMSB<<8) + ZLSB, 16)/900]
 
-        return vec[1]
+        return vec[2]
     

@@ -1,7 +1,6 @@
 import sys
 sys.path.append('../')
 import IMU
-import IMU
 import time
 import matplotlib.pyplot as plt
 import math
@@ -10,14 +9,13 @@ import math
 IMU = IMU.IMU(0, 40)
 IMU.setupIMU()
 
-values = []
-times = []
-valuesRaw1 = []
-valuesRaw2 = []
-
 plot_dir = './plots/'
 
 plt.switch_backend('Agg')
+
+times = []
+pitchAngles = []
+pitchRates = []
 
 stamp = time.time()
 while (time.time() - stamp < 200):
@@ -32,33 +30,24 @@ while (time.time() - stamp < 200):
     angleYaw = IMU.getYawAngle()
     anglePitch = IMU.getPitchAngle()
 
-
-
     # print(anglePitch)
-    # print(angleYaw)
-    print(wogma)
+    print(IMU.getCalibStatus())
+    print(IMU.saveCalibrationConstants())
+    times.append(time.time() - stamp)
+    pitchAngles.append(anglePitch)
+    pitchRates.append(wogma)
+    
 
-    # values.append(angle[0])
-    # valuesRaw1.append(angle[1])
-    # valuesRaw2.append(angle[2])
-    # times.append(time.time() - stamp)
-
-fig, axs = plt.subplots(nrows=3, ncols=1, figsize=(8, 16))
-
-# Plot 1
-axs[0].plot(times, values, label='ang')
+fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(8, 16))
+axs[0].plot(times, pitchAngles, label='Pitch Angles')
 axs[0].legend()
-axs[0].set_title("ang")
-
-axs[1].plot(times, valuesRaw1, label='Y RAW')
+axs[0].set_title("Pitch Angles")
+axs[1].plot(times, pitchRates, label='Pitch Rates')
 axs[1].legend()
-axs[1].set_title("Y RAW")
+axs[1].set_title("Pitch Rates")
 
-axs[2].plot(times, valuesRaw2, label='Z RAW')
-axs[2].legend()
-axs[2].set_title("Z RAW")
 
 plt.tight_layout()
-plt.savefig(plot_dir+ "IMU_PLOT.png")
+plt.savefig(plot_dir + "IMU_Plot.png")
 plt.clf()
 

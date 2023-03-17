@@ -13,6 +13,7 @@ plot_dir = './plots/'
 
 IMU = IMU.IMU(0, 40)
 IMU.setupIMU()
+IMU.restoreCalibrationConstants([252, 255, 21, 0, 53, 0, 135, 1, 54, 1, 253, 1, 0, 0, 254, 255, 0, 0, 232, 3, 249])
 
 odrv0 = odrive.find_any()
 
@@ -59,7 +60,7 @@ def LQR(axis0, axis1):
     Cl_commands = []
     Cr_commands = []
 
-    while cur_time < 30:
+    while cur_time < 60:
         time.sleep(0.001)
 
         # if cur_time > 3:
@@ -69,7 +70,7 @@ def LQR(axis0, axis1):
         if abs(axis0.get_torque_input()) > 10:
             print("torque too high: ",axis0.get_torque_input(),"Nm")
             break
-        if abs(axis0.get_vel()) > 10:
+        if abs(axis0.get_vel()) > 3:
             print("velocity too high: ",axis0.get_vel(),"turns/s")
             break
 
@@ -83,9 +84,9 @@ def LQR(axis0, axis1):
         print("calc x: ", x)
         print("calc v: ", v)
 
-        pitch_angle=IMU.getPitchAngle() 
+        pitch_angle= IMU.getPitchAngle() 
         yaw_angle=IMU.getYawAngle()
-        pitch_rate=-IMU.getPitchRate()
+        pitch_rate= IMU.getPitchRate()
         yaw_rate=-IMU.getYawRate()
 
         X = np.array([x, v, pitch_angle, pitch_rate, yaw_angle, yaw_rate])
