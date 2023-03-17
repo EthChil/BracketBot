@@ -13,7 +13,7 @@ plot_dir = './plots/'
 
 IMU = IMU.IMU(0, 40)
 IMU.setupIMU()
-IMU.restoreCalibrationConstants([252, 255, 21, 0, 53, 0, 135, 1, 54, 1, 253, 1, 0, 0, 254, 255, 0, 0, 232, 3, 249])
+# IMU.restoreCalibrationConstants([252, 255, 21, 0, 53, 0, 135, 1, 54, 1, 253, 1, 0, 0, 254, 255, 0, 0, 232, 3, 249])
 
 odrv0 = odrive.find_any()
 

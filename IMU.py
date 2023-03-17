@@ -77,6 +77,12 @@ class IMU:
         #NDOF mode - sensor fusion mode which allows us to access the gravity vector
         time.sleep(1)
         #write RST_SYS in SYS_TRIGGER
+
+        if(self.getCalibStatus()["Accelerometer"] and self.getCalibStatus()["Gyro"]):
+            print("already calibrated that's wild")
+            self.setup = 1
+            return
+
         self.writeByte(0x3F, 0x20)
         time.sleep(1)
         print("0x3f 20")
@@ -142,7 +148,7 @@ class IMU:
 
         calibrationValues = []
 
-        for i in range(0x55, 0x6A, 0x01):
+        for i in range(0x55, 0x6B, 0x01):
             calibrationValues.append(self.readByte(i))
 
         self.writeByte(0x3D, 0x08)
@@ -156,7 +162,7 @@ class IMU:
         print("Entering Config Mode")
 
         calibrationStep = 0
-        for i in range(0x55, 0x6A, 0x01):
+        for i in range(0x55, 0x6B, 0x01):
             self.writeByte(i, calibrationValues[calibrationStep])
 
         self.writeByte(0x3D, 0x08)
@@ -237,9 +243,8 @@ class IMU:
 
     # calculate angle based on the angle of the gravity vector and a trim value for what it is while balanced
     def getPitchAngle(self):
-        # adjust = -0.007142735669418479#rads
-        # adjust = -0.11494284164306612
-        adjust = -0.10796626140477657
+        adjust = -0.12091657771742231
+        # adjust = -0.385229984122705 #rads
 
         referenceAxis = np.array([1, 0, 0]) # for top mount
 

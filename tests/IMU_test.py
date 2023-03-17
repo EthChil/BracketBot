@@ -8,6 +8,7 @@ import math
 
 IMU = IMU.IMU(0, 40)
 IMU.setupIMU()
+# IMU.restoreCalibrationConstants([252, 255, 21, 0, 53, 0, 135, 1, 54, 1, 253, 1, 0, 0, 254, 255, 0, 0, 232, 3, 249])
 
 plot_dir = './plots/'
 
@@ -30,9 +31,9 @@ while (time.time() - stamp < 200):
     angleYaw = IMU.getYawAngle()
     anglePitch = IMU.getPitchAngle()
 
-    # print(anglePitch)
+    print(anglePitch)
     print(IMU.getCalibStatus())
-    print(IMU.saveCalibrationConstants())
+    # print(IMU.saveCalibrationConstants())
     times.append(time.time() - stamp)
     pitchAngles.append(anglePitch)
     pitchRates.append(wogma)
