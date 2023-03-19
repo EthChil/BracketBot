@@ -6,9 +6,9 @@ import matplotlib.pyplot as plt
 import math
 
 
-IMU = IMU.IMU(0, 40)
+IMU = IMU.IMU(0, 40) # 1, 0, 0 for top mounting on front/back of extrusion, 0, 0, 1 for conventional mount
 IMU.setupIMU()
-# IMU.restoreCalibrationConstants([252, 255, 21, 0, 53, 0, 135, 1, 54, 1, 253, 1, 0, 0, 254, 255, 0, 0, 232, 3, 249])
+IMU.restoreCalibrationConstants([0, 0, 85, 0, 1, 0, 166, 1, 77, 1, 176, 1, 1, 0, 0, 0, 0, 0, 232, 3, 178, 1])
 
 plot_dir = './plots/'
 
@@ -27,13 +27,12 @@ while (time.time() - stamp < 200):
 
     # angle = IMU.getAngle()
     wogma = IMU.getPitchRate()
-    # wogma_yaw = IMU.getWogmaYaw()
+    wogma_yaw = IMU.getYawRate()
     angleYaw = IMU.getYawAngle()
     anglePitch = IMU.getPitchAngle()
 
-    print(anglePitch)
+    print(angleYaw)
     print(IMU.getCalibStatus())
-    # print(IMU.saveCalibrationConstants())
     times.append(time.time() - stamp)
     pitchAngles.append(anglePitch)
     pitchRates.append(wogma)

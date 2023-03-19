@@ -20,6 +20,7 @@ class IMU:
 
         #yaw start offset
         self.yaw_start_angle = 0.0
+        
 
         if (bus > maxI2CBusses or bus < 0):
             print("Error attempting to access I2C bus out of range")
@@ -78,9 +79,10 @@ class IMU:
         time.sleep(1)
         #write RST_SYS in SYS_TRIGGER
 
-        if(self.getCalibStatus()["Accelerometer"] and self.getCalibStatus()["Gyro"]):
+        if(self.getCalibStatus()["Accelerometer"] == 3 and self.getCalibStatus()["Gyro"] == 3):
             print("already calibrated that's wild")
             self.setup = 1
+            self.yaw_start_angle = self.getYawAngle()
             return
 
         self.writeByte(0x3F, 0x20)
@@ -110,7 +112,7 @@ class IMU:
         #8 for IMU
         # 7 for AMG mercedes
         # C for NDOF
-        self.writeByte(0x3D, 0x08)
+        self.writeByte(0x3D, 0x08) #08
         time.sleep(0.5)
         print("0x3d 08")
         print(self.readByte(0x3D))
@@ -130,18 +132,19 @@ class IMU:
         time.sleep(0.5)
 
         self.setup = 1
-        self.yaw_start_angle = self.getYawAngle()
+        
 
 
     def getCalibStatus(self):
         stat = self.readByte(0x35)
-        return {"Accelerometer" : (stat >> 2) & 0b11 > 0, "Gyro" : (stat >> 4) & 0b11 > 0, "Magnetometer" : stat & 0b11 > 0, "System" : (stat >> 6) & 0b11 > 0}
+        return {"Accelerometer" : (stat >> 2) & 0b11, "Gyro" : (stat >> 4) & 0b11, "Magnetometer" : stat & 0b11, "System" : (stat >> 6) & 0b11}
     
     def saveCalibrationConstants(self):
-        if(not self.getCalibStatus()["System"]):
+        print(self.getCalibStatus())
+        if sum(self.getCalibStatus().values()) < 12:
             print("Calibrate fully before saving profile")
             return
-
+        prevMode = self.readByte(0x3D)
         self.writeByte(0x3D, 0x00)
         time.sleep(0.5)
         print("Entering Config Mode")
@@ -151,21 +154,24 @@ class IMU:
         for i in range(0x55, 0x6B, 0x01):
             calibrationValues.append(self.readByte(i))
 
-        self.writeByte(0x3D, 0x08)
+        self.writeByte(0x3D, prevMode)
         time.sleep(0.5)
         print("Exiting Config Mode")
         return calibrationValues
     
     def restoreCalibrationConstants(self, calibrationValues):
+        prevMode = self.readByte(0x3D)
         self.writeByte(0x3D, 0x00)
         time.sleep(0.5)
         print("Entering Config Mode")
 
         calibrationStep = 0
         for i in range(0x55, 0x6B, 0x01):
+            # print(f"Address: {format(i, '#x')}, Value: {calibrationValues[calibrationStep]}")
             self.writeByte(i, calibrationValues[calibrationStep])
+            calibrationStep += 1
 
-        self.writeByte(0x3D, 0x08)
+        self.writeByte(0x3D, prevMode)
         time.sleep(0.5)
         print("Exiting Config Mode")
 
@@ -174,7 +180,7 @@ class IMU:
     def getGravityVector(self):
         if(not self.setup):
             print("ERROR IMU has not been initialized")
-            return [-1, -1, -1]
+            return None
 
         rawZ = 255
         rawX = 255
@@ -207,7 +213,7 @@ class IMU:
     def getYawAngle(self):
         if(not self.setup):
             print("ERROR IMU has not been initialized")
-            return -1
+            return None
 
         rawZ = 255
         rawX = 255
@@ -224,7 +230,7 @@ class IMU:
         rawZ = self.twosComp((ZMSB<<8) + ZLSB, 16)/900
 
         # units are in rad from 0 -> 2pi
-        yaw = rawX
+        yaw = rawX # base mount is rawX
 
         #measured in radians this will go from -pi to +pi
         norm = math.atan2(math.sin(yaw), math.cos(yaw)) - self.yaw_start_angle
@@ -243,10 +249,12 @@ class IMU:
 
     # calculate angle based on the angle of the gravity vector and a trim value for what it is while balanced
     def getPitchAngle(self):
-        adjust = -0.12091657771742231
-        # adjust = -0.385229984122705 #rads
+        if(not self.setup):
+            print("ERROR IMU has not been initialized")
+            return None
+        adjust = -1.603455788700063
 
-        referenceAxis = np.array([1, 0, 0]) # for top mount
+        referenceAxis = np.array([0, 0, 1]) # 1, 0, 0 for top mounting on front/back of extrusion, 0, 0, 1 for conventional mount
 
         vec = np.array(self.getGravityVector())
 
@@ -258,7 +266,7 @@ class IMU:
         # rotate the 
         if(not self.setup):
             print("ERROR IMU has not been initialized UN SMART INDIVIDUAL")
-            return [-1, -1, -1]
+            return None
 
         XMSB = self.readByte(0x15)
         XLSB = self.readByte(0x14)
@@ -272,7 +280,7 @@ class IMU:
                 self.twosComp((YMSB<<8) + YLSB, 16)/900,
                 self.twosComp((ZMSB<<8) + ZLSB, 16)/900]
 
-        return vec[0]
+        return vec[2] # 0 for top mount, 2 for base mount
 
     # gyro yaw rate
     def getYawRate(self):
@@ -280,7 +288,7 @@ class IMU:
         # rotate the 
         if(not self.setup):
             print("ERROR IMU has not been initialized UN SMART INDIVIDUAL")
-            return [-1, -1, -1]
+            return None
 
         XMSB = self.readByte(0x15)
         XLSB = self.readByte(0x14)
@@ -294,5 +302,5 @@ class IMU:
                 self.twosComp((YMSB<<8) + YLSB, 16)/900,
                 self.twosComp((ZMSB<<8) + ZLSB, 16)/900]
 
-        return vec[2]
+        return vec[1] #2 for top mount, 1 for base mount
     
