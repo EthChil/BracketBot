@@ -12,7 +12,9 @@ plt.switch_backend('Agg')
 plot_dir = './plots/'
 
 IMU = IMU.IMU(0, 40)
+IMU.restoreCalibrationConstants([0, 0, 85, 0, 1, 0, 166, 1, 77, 1, 176, 1, 1, 0, 0, 0, 0, 0, 232, 3, 178, 1])
 IMU.setupIMU()
+
 
 odrv0 = odrive.find_any()
 
@@ -59,7 +61,7 @@ def LQR(axis0, axis1):
     Cl_commands = []
     Cr_commands = []
 
-    while cur_time < 30:
+    while cur_time < 3:
         time.sleep(0.001)
 
         # if cur_time > 3:
@@ -69,7 +71,7 @@ def LQR(axis0, axis1):
         if abs(axis0.get_torque_input()) > 10:
             print("torque too high: ",axis0.get_torque_input(),"Nm")
             break
-        if abs(axis0.get_vel()) > 10:
+        if abs(axis0.get_vel()) > 3:
             print("velocity too high: ",axis0.get_vel(),"turns/s")
             break
 
@@ -78,15 +80,15 @@ def LQR(axis0, axis1):
 
         x = axis0.get_pos_turns() * t2m - x_init
         v = axis0.get_vel() * t2m
-        print("raw x: ", axis0.get_pos_turns())
-        print("raw vel: ", axis0.get_vel())
-        print("calc x: ", x)
-        print("calc v: ", v)
+        # print("raw x: ", axis0.get_pos_turns())
+        # print("raw vel: ", axis0.get_vel())
+        # print("calc x: ", x)
+        # print("calc v: ", v)
 
-        pitch_angle=IMU.getPitchAngle() 
-        yaw_angle=IMU.getYawAngle()
-        pitch_rate=-IMU.getPitchRate()
-        yaw_rate=-IMU.getYawRate()
+        pitch_angle= IMU.getPitchAngle() # positive for base mount
+        yaw_angle= IMU.getYawAngle() # positive for base mount
+        pitch_rate= -IMU.getPitchRate() # negative for base mount
+        yaw_rate= -IMU.getYawRate() # negative for base mount
 
         X = np.array([x, v, pitch_angle, pitch_rate, yaw_angle, yaw_rate])
 
