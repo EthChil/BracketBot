@@ -1,11 +1,177 @@
-import time
+import time                                                 
+import board
 from smbus2 import SMBus
 import math
 import numpy as np
+import busio
+
+
+# import sys
+# sys.path.insert(1, 'Adafruit_CircuitPython_BNO08x/')
+from Adafruit_CircuitPython_BNO08x.adafruit_bno08x import (
+    BNO_REPORT_ACCELEROMETER,
+    BNO_REPORT_GRAVITY,
+    BNO_REPORT_GYROSCOPE,
+    BNO_REPORT_MAGNETOMETER,
+    BNO_REPORT_ROTATION_VECTOR,
+)
+from Adafruit_CircuitPython_BNO08x.adafruit_bno08x.i2c import BNO08X_I2C
+
 
 maxI2CBusses = 2
 
-class IMU:
+class IMU_BNO085:
+    setup = 0
+
+    # initialize the IMU by opening the I2C connection and zeroing yaw
+    def __init__(self):
+        #for wrapping yaw:
+        self.prev_angle = 0
+        self.wraps = 0
+                                         
+        #yaw start offset
+        self.yaw_start_angle = 0.0
+
+        # open SMBus object
+        try:
+            self.bus = busio.I2C(board.SCL_1, board.SDA_1, frequency=400000)
+            self.bno = BNO08X_I2C(self.bus)
+        except:
+            print("Failed to open I2C SMBus on port " + str(self.bus))
+
+    # simple twos complement function
+    def twosComp(self, val, length):
+        bits = length
+
+        if (val & (1 << (bits - 1))) != 0: # if sign bit is set e.g., 8bit: 128-255
+            val = val - (1 << bits)        # compute negative value
+        return val                         # return positive value as is
+
+    import math
+ 
+    def euler_from_quaternion(self, x, y, z, w):
+        """
+        Convert a quaternion into euler angles (roll, pitch, yaw)
+        roll is rotation around x in radians (counterclockwise)
+        pitch is rotation around y in radians (counterclockwise)
+        yaw is rotation around z in radians (counterclockwise)
+        """
+        t0 = +2.0 * (w * x + y * z)
+        t1 = +1.0 - 2.0 * (x * x + y * y)
+        roll_x = math.atan2(t0, t1)
+     
+        t2 = +2.0 * (w * y - z * x)
+        t2 = +1.0 if t2 > +1.0 else t2
+        t2 = -1.0 if t2 < -1.0 else t2
+        pitch_y = math.asin(t2)
+     
+        t3 = +2.0 * (w * z + x * y)
+        t4 = +1.0 - 2.0 * (y * y + z * z)
+        yaw_z = math.atan2(t3, t4)
+     
+        return roll_x, pitch_y, yaw_z # in radians
+
+    # setup IMU and set flag
+    def setupIMU(self):
+        self.bno.initialize()
+
+        self.bno.enable_feature(BNO_REPORT_ACCELEROMETER)
+        self.bno.enable_feature(BNO_REPORT_GRAVITY)
+        self.bno.enable_feature(BNO_REPORT_GYROSCOPE)
+        self.bno.enable_feature(BNO_REPORT_MAGNETOMETER)
+        self.bno.enable_feature(BNO_REPORT_ROTATION_VECTOR)
+
+        time.sleep(1)
+
+        self.setup = 1
+
+    def getCalibStatus(self):
+        return self.bno.calibration_status
+    
+    def saveCalibrationConstants(self):
+        if(self.getCalibStatus()):
+            try:
+                self.bno.save_calibration_data()
+                print("Calibration saved")
+            except:
+                print("Failed to save calibration data")
+        else:
+            print("sensor not calibrated yet")
+            self.bno.begin_calibration()
+    
+    #no adafruit function exists to do this
+    def restoreCalibrationConstants(self, calibrationValues):
+        return None
+
+    # get gravity vector not natively supported in adafruit libraryS
+    def getGravityVector(self):
+        grav_vec = self.bno.gravity
+
+        return grav_vec
+        # return [1, 1, 1] #example return data format for gravity vector in [x,y,z]
+
+    # yaw angle from quaternionn 
+    def getYawAngle(self):
+        if(not self.setup):
+            print("ERROR IMU has not been initialized")
+            return None
+
+        (q_i, q_j, q_k, q_real) = self.bno.quaternion
+        (roll, pitch, yaw) = self.euler_from_quaternion(q_i, q_j, q_k, q_real)
+
+        #measured in radians this will go from -pi to +pi
+        norm = math.atan2(math.sin(yaw), math.cos(yaw)) - self.yaw_start_angle
+
+        if norm - self.prev_angle > math.pi:
+            self.wraps -= 1
+        elif self.prev_angle - norm > math.pi:
+            self.wraps += 1
+
+        self.prev_angle = norm
+        continuous_angle = norm + 2*math.pi*self.wraps
+
+        return continuous_angle
+
+    # calculate angle based on the angle of the gravity vector and a trim value for what it is while balanced
+    def getPitchAngle(self):
+        if(not self.setup):
+            print("ERROR IMU has not been initialized")
+            return None
+        adjust = -1.603455788700063
+
+        referenceAxis = np.array([0, 0, 1]) # 1, 0, 0 for top mounting on front/back of extrusion, 0, 0, 1 for conventional mount
+
+        vec = np.array(self.getGravityVector())
+
+        return (math.acos(np.dot(referenceAxis, vec)/(np.linalg.norm(referenceAxis)*np.linalg.norm(vec)))) + adjust
+
+    # gyro pitch rate
+    def getPitchRate(self):
+        # pull the wogma from the sensor
+        # rotate the 
+        if(not self.setup):
+            print("ERROR IMU has not been initialized UN SMART INDIVIDUAL")
+            return None
+
+        (gyro_x, gyro_y, gyro_z) = self.bno.gyro
+
+        return gyro_z # 0 for top mount, 2 for base mount
+
+    # gyro yaw rate
+    def getYawRate(self):
+        # pull the wogma from the sensor
+        # rotate the 
+        if(not self.setup):
+            print("ERROR IMU has not been initialized UN SMART INDIVIDUAL")
+            return None
+
+        (gyro_x, gyro_y, gyro_z) = self.bno.gyro
+
+        return gyro_y # 0 for top mount, 2 for base mount
+    
+
+
+class IMU_BNO055:
     setup = 0
 
     # initialize the IMU by opening the I2C connection and 
@@ -17,10 +183,9 @@ class IMU:
         #for wrapping yaw:
         self.prev_angle = 0
         self.wraps = 0
-
+                                         
         #yaw start offset
         self.yaw_start_angle = 0.0
-        
 
         if (bus > maxI2CBusses or bus < 0):
             print("Error attempting to access I2C bus out of range")

@@ -61,7 +61,7 @@ def LQR(axis0, axis1):
     Cl_commands = []
     Cr_commands = []
 
-    while cur_time < 5:
+    while cur_time < 3:
         time.sleep(0.001)
 
         # if cur_time > 3:
