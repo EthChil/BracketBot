@@ -5,6 +5,7 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 import IMU
+import math
 
 from odriveDriver import Axis
 plt.switch_backend('Agg')
@@ -19,33 +20,48 @@ IMU.setupIMU()
 # IMU.restoreCalibrationConstants([0, 0, 85, 0, 1, 0, 166, 1, 77, 1, 176, 1, 1, 0, 0, 0, 0, 0, 232, 3, 178, 1]) #only for bno55
 # IMU.setupIMU()
 
-
 odrv0 = odrive.find_any()
 
 ref_time = time.time()
 t2m = 0.528 #turns to meters
 
 
-
-# K = np.array([[-3.1623,  -4.4213, -28.1290,  -8.7088, 0, 0], [0,0,0,0,1,1.2749]]) #New dynamimcs ones
-# K = np.array([[-1.0000, -2.0620, -21.0476, -6.6199, -0.0000, 0.0000], [0.0000, 0.0000, 0.0000, 0.0000, 1.0000, 1.2749]]) #swapped Q's
-# K = np.array([[-10.0000, -10.6250, -45.9842, -13.8316, -0.0000, -0.0000], [0.0000, 0.0000, 0.0000, 0.0000, 3.1623, 2.4132]]) #stronger R's set to 1
-# K = np.array([[-4.4721, -5.7066, -31.9805, -9.8143, -0.0000, -0.0000], [0.0000, 0.0000, 0.0000, 0.0000, 1.4142, 1.5353]]) #strogner R's  set to 5
-
-#good one
-# K = np.array([[-5.77, -6.92, -35.52, -10.83, -0.00, 0.00],[-0.00, -0.00, -0.00, 0.00, 1.83, 1.77]]) #stronger R's set to 3
-
 #with ivans fix
 K = np.array([[-5.77, -7.74, -42.86, -16.89, 0.00, 0.00],[-0.00, -0.00, -0.00, -0.00, 1.83, 1.77]] )
 
 
+#PATH PLANNING STUFF
+position_numbers = []
+lines = 0
 
+with open('paths/path1.txt', 'r') as file:
+    x = 0
+    y = 0
+    for line in file:
+        lines += 1
+        stripped_line = line.strip()
+        
+        if stripped_line:
+            try:
+                x, y = stripped_line.split(',')
+                position_numbers.append([float(x), float(y)])
+            except:
+                position_numbers.append([float(x), float(y)])
+        
+        
+print(position_numbers)
 
+pathplan_lps = 3 #path planning lines per second to read from the text file
+path_time = lines/pathplan_lps
+
+print('path time', path_time)
 
 
 def LQR(axis0, axis1):
     # read initial values to offset
     x_init = axis0.get_pos_turns() * t2m
+    
+    pos_init = (axis0.get_pos_turns() * t2m + axis1.get_pos_turns() * t2m)/2
 
     pitch_angle=IMU.getPitchAngle() 
     yaw_angle=IMU.getYawAngle()
@@ -75,9 +91,15 @@ def LQR(axis0, axis1):
     
     posCommandeds = []
     posActuals = []
+    
+    angleCommandeds = []
+    angleActuals = []
 
-    while cur_time < 30:
+    while cur_time < path_time:
         time.sleep(0.0001)
+        
+        cur_time = time.time() - start_time # relative time starts at 0
+        dt = cur_time - prev_time
         
         #stop the program if the torque or vel gets super high
         if abs(axis0.get_torque_input()) > 10:
@@ -87,22 +109,23 @@ def LQR(axis0, axis1):
             print("velocity too high: ",axis0.get_vel(),"turns/s")
             break
 
+        # if cur_time > 3:
+        #     posCommand = 0.0 + (cur_time-3)*0.1
+        #     Xf = np.array([posCommand, 0, 0, 0, 0, 0])
         posCommand = 0
-        if cur_time > 3:
-            posCommand = 0.0 + (cur_time-3)*0.2
-            Xf = np.array([posCommand, 0, 0, 0, 0, 0])
-
+        angleCommand = 0
         
+        #PATH PLANNING
+        index = min(round(cur_time * pathplan_lps), lines-1)
+        posCommand = position_numbers[index][0]
+        angleCommand = position_numbers[index][1]
+        
+        print(posCommand, angleCommand)
+        
+        Xf = np.array([posCommand, 0, 0, 0, angleCommand, 0])
 
-        cur_time = time.time() - start_time # relative time starts at 0
-        dt = cur_time - prev_time
-
-        x = axis0.get_pos_turns() * t2m - x_init
-        v = axis0.get_vel() * t2m
-        # print("raw x: ", axis0.get_pos_turns())
-        # print("raw vel: ", axis0.get_vel())
-        # print("calc x: ", x)
-        # print("calc v: ", v)
+        x = (axis0.get_pos_turns() * t2m  + axis1.get_pos_turns() * t2m)/2 - pos_init
+        v = (axis0.get_vel() * t2m + axis1.get_vel() * t2m)/2
 
         
         yaw_angle= -IMU.getYawAngle() # positive for base mount
@@ -143,7 +166,10 @@ def LQR(axis0, axis1):
         Cr_commands.append(Cr)
         
         posCommandeds.append(posCommand)
-        posActuals.append((axis0.get_pos_turns()*t2m + axis1.get_pos_turns()*t2m)/2)
+        posActuals.append((axis0.get_pos_turns()*t2m + axis1.get_pos_turns()*t2m)/2 - pos_init)
+        
+        angleCommandeds.append(angleCommand)
+        angleActuals.append(math.degrees(yaw_angle))
         
 
         # print(time.time() - start_time)
