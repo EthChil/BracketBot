@@ -35,7 +35,7 @@ class Axis:
         self.axis.controller.input_vel = v * self.dir
 
     def set_trq(self, t=0):
-        self.axis.controller.config.input_mode = 1
+        # self.axis.controller.config.input_mode = 1
         if self.axis.controller.config.control_mode != CONTROL_MODE_TORQUE_CONTROL:
             self.axis.controller.config.control_mode = CONTROL_MODE_TORQUE_CONTROL
             print("changed to torque control")

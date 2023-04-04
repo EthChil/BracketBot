@@ -82,13 +82,15 @@ class IMU_BNO085:
         self.bno.enable_feature(BNO_REPORT_ROTATION_VECTOR)
 
         time.sleep(1)
-
+        
         self.setup = 1
+        self.yaw_start_angle = self.getYawAngle()
 
     def getCalibStatus(self):
         return self.bno.calibration_status
     
     def saveCalibrationConstants(self):
+        print(self.getCalibStatus())
         if(self.getCalibStatus()):
             try:
                 self.bno.save_calibration_data()
@@ -105,10 +107,10 @@ class IMU_BNO085:
 
     # get gravity vector not natively supported in adafruit libraryS
     def getGravityVector(self):
-        grav_vec = self.bno.gravity
+        (q_i, q_j, q_k, q_real) = self.bno.quaternion
+        grav_vec = self.euler_from_quaternion(q_i, q_j, q_k, q_real)
 
         return grav_vec
-        # return [1, 1, 1] #example return data format for gravity vector in [x,y,z]
 
     # yaw angle from quaternionn 
     def getYawAngle(self):
@@ -137,13 +139,9 @@ class IMU_BNO085:
         if(not self.setup):
             print("ERROR IMU has not been initialized")
             return None
-        adjust = -1.603455788700063
+        adjust = -math.radians(1.6)#adjust for -90
 
-        referenceAxis = np.array([0, 0, 1]) # 1, 0, 0 for top mounting on front/back of extrusion, 0, 0, 1 for conventional mount
-
-        vec = np.array(self.getGravityVector())
-
-        return (math.acos(np.dot(referenceAxis, vec)/(np.linalg.norm(referenceAxis)*np.linalg.norm(vec)))) + adjust
+        return self.getGravityVector()[1] - adjust
 
     # gyro pitch rate
     def getPitchRate(self):
@@ -175,7 +173,7 @@ class IMU_BNO055:
     setup = 0
 
     # initialize the IMU by opening the I2C connection and 
-    def __init__(self, bus, chipAdd, maxAddress=0x106, maxData=255):
+    def __init__(self, bus, chipAdd, maxAddress=0x106, maxData=255, useBusIO=False):
         self.maxAddr = maxAddress
         self.maxData = maxData
         self.chipAdd = chipAdd
@@ -297,8 +295,6 @@ class IMU_BNO055:
         time.sleep(0.5)
 
         self.setup = 1
-        
-
 
     def getCalibStatus(self):
         stat = self.readByte(0x35)
@@ -417,7 +413,7 @@ class IMU_BNO055:
         if(not self.setup):
             print("ERROR IMU has not been initialized")
             return None
-        adjust = -1.603455788700063
+        adjust = -math.pi/2 - 0.0279253 + math.radians(0.73)
 
         referenceAxis = np.array([0, 0, 1]) # 1, 0, 0 for top mounting on front/back of extrusion, 0, 0, 1 for conventional mount
 

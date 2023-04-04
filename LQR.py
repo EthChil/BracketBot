@@ -11,9 +11,13 @@ plt.switch_backend('Agg')
 
 plot_dir = './plots/'
 
-IMU = IMU.IMU(0, 40)
-IMU.restoreCalibrationConstants([0, 0, 85, 0, 1, 0, 166, 1, 77, 1, 176, 1, 1, 0, 0, 0, 0, 0, 232, 3, 178, 1])
+IMU = IMU.IMU_BNO085()
+# IMU.restoreCalibrationConstants([0, 0, 85, 0, 1, 0, 166, 1, 77, 1, 176, 1, 1, 0, 0, 0, 0, 0, 232, 3, 178, 1]) only for bno55
 IMU.setupIMU()
+
+# IMU = IMU.IMU_BNO055(0, 40)
+# IMU.restoreCalibrationConstants([0, 0, 85, 0, 1, 0, 166, 1, 77, 1, 176, 1, 1, 0, 0, 0, 0, 0, 232, 3, 178, 1]) #only for bno55
+# IMU.setupIMU()
 
 
 odrv0 = odrive.find_any()
@@ -27,7 +31,15 @@ t2m = 0.528 #turns to meters
 # K = np.array([[-1.0000, -2.0620, -21.0476, -6.6199, -0.0000, 0.0000], [0.0000, 0.0000, 0.0000, 0.0000, 1.0000, 1.2749]]) #swapped Q's
 # K = np.array([[-10.0000, -10.6250, -45.9842, -13.8316, -0.0000, -0.0000], [0.0000, 0.0000, 0.0000, 0.0000, 3.1623, 2.4132]]) #stronger R's set to 1
 # K = np.array([[-4.4721, -5.7066, -31.9805, -9.8143, -0.0000, -0.0000], [0.0000, 0.0000, 0.0000, 0.0000, 1.4142, 1.5353]]) #strogner R's  set to 5
-K = np.array([[-5.77, -6.92, -35.52, -10.83, -0.00, 0.00],[-0.00, -0.00, -0.00, 0.00, 1.83, 1.77]]) #stronger R's set to 3
+
+#good one
+# K = np.array([[-5.77, -6.92, -35.52, -10.83, -0.00, 0.00],[-0.00, -0.00, -0.00, 0.00, 1.83, 1.77]]) #stronger R's set to 3
+
+#with ivans fix
+K = np.array([[-5.77, -7.74, -42.86, -16.89, 0.00, 0.00],[-0.00, -0.00, -0.00, -0.00, 1.83, 1.77]] )
+
+
+
 
 
 
@@ -60,13 +72,13 @@ def LQR(axis0, axis1):
 
     Cl_commands = []
     Cr_commands = []
+    
+    posCommandeds = []
+    posActuals = []
 
-    while cur_time < 3:
-        time.sleep(0.001)
-
-        # if cur_time > 3:
-        #     Xf = np.array([0.0 + (cur_time-3)*0.2, 0.0, 0, 0])
-
+    while cur_time < 30:
+        time.sleep(0.0001)
+        
         #stop the program if the torque or vel gets super high
         if abs(axis0.get_torque_input()) > 10:
             print("torque too high: ",axis0.get_torque_input(),"Nm")
@@ -74,6 +86,13 @@ def LQR(axis0, axis1):
         if abs(axis0.get_vel()) > 3:
             print("velocity too high: ",axis0.get_vel(),"turns/s")
             break
+
+        posCommand = 0
+        if cur_time > 3:
+            posCommand = 0.0 + (cur_time-3)*0.2
+            Xf = np.array([posCommand, 0, 0, 0, 0, 0])
+
+        
 
         cur_time = time.time() - start_time # relative time starts at 0
         dt = cur_time - prev_time
@@ -85,10 +104,12 @@ def LQR(axis0, axis1):
         # print("calc x: ", x)
         # print("calc v: ", v)
 
-        pitch_angle= IMU.getPitchAngle() # positive for base mount
-        yaw_angle= IMU.getYawAngle() # positive for base mount
-        pitch_rate= -IMU.getPitchRate() # negative for base mount
+        
+        yaw_angle= -IMU.getYawAngle() # positive for base mount
+        pitch_angle= -IMU.getPitchAngle() # positive for base mount
+        pitch_rate= IMU.getPitchRate() # negative for base mount
         yaw_rate= -IMU.getYawRate() # negative for base mount
+        
 
         X = np.array([x, v, pitch_angle, pitch_rate, yaw_angle, yaw_rate])
 
@@ -102,10 +123,11 @@ def LQR(axis0, axis1):
         Cl, Cr = D @ (-K @ (X - Xf))
         # print("Cl: ", Cl)
         # print("Cr: ", Cr)
-
-
+        
+        
         axis0.set_trq(Cl)
         axis1.set_trq(Cr)
+        
 
         times.append(cur_time)
         dts.append(dt)
@@ -119,12 +141,18 @@ def LQR(axis0, axis1):
 
         Cl_commands.append(Cl)
         Cr_commands.append(Cr)
+        
+        posCommandeds.append(posCommand)
+        posActuals.append((axis0.get_pos_turns()*t2m + axis1.get_pos_turns()*t2m)/2)
+        
 
+        # print(time.time() - start_time)
+        
         prev_time = cur_time
 
     brake_both_motors(a0, a1)
 
-    fig, axs = plt.subplots(nrows=8, ncols=1, figsize=(8, 16))
+    fig, axs = plt.subplots(nrows=9, ncols=1, figsize=(8, 16))
 
     # Plot 1
     axs[0].plot(times, dts, label='dts')
@@ -165,6 +193,11 @@ def LQR(axis0, axis1):
     axs[7].plot(times, Cr_commands, label='torque left')
     axs[7].legend()
     axs[7].set_title("Balance Torques")
+    
+    axs[8].plot(times, posCommandeds, label='pos commanded')
+    axs[8].plot(times, posActuals, label='pos actual')
+    axs[8].legend()
+    axs[8].set_title("Positions Planning")
 
     plt.tight_layout()
     plt.savefig(plot_dir+ "balance_plots.png")
