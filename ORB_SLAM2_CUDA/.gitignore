@@ -1,0 +1,43 @@
+*.swp
+build/
+log/
+Examples/Monocular/mono_kitti
+Examples/Monocular/mono_tum
+Examples/RGB-D/rgbd_tum
+Examples/Stereo/stereo_kitti
+Thirdparty/DBoW2/build/
+Thirdparty/g2o/build/
+Thirdparty/g2o/config.h
+Vocabulary/ORBvoc.txt
+KeyFrameTrajectory.txt
+CameraTrajectory.txt
+.vscode/
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app

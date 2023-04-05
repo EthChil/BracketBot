@@ -38,9 +38,44 @@ K = np.array([[-5.77, -7.74, -42.86, -16.89, 0.00, 0.00],[-0.00, -0.00, -0.00, -
 # K = np.array([[-0.58, -2.57, -26.38, -9.95, 0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 1.83, 1.77]] )
 
 
-# K = np.array([[-10.00, -13.15, -64.11, -25.50, 0.00, 0.00],[-0.00, -0.00, -0.00, -0.00, 3.16, 2.41]] )
+# K = np.array([[-4.47, -6.70, -40.30, -15.81, -0.00, -0.00],[-0.00, -0.00, -0.00, -0.00, 3.16, 2.61]] )
+
+W = 0.567   # Distance between wheels in meters
+
+a0 = Axis(odrv0.axis0, dir=1)
+a1 = Axis(odrv0.axis1, dir=-1)
+
+a0.setup()
+a1.setup()
+
+pos_init_a0 = a0.get_pos_turns() * t2m
+pos_init_a1 = a1.get_pos_turns() * t2m
+
+pos_a0_cur = a0.get_pos_turns() * t2m - pos_init_a0
+pos_a1_cur = a1.get_pos_turns() * t2m - pos_init_a1
+pos_a0_prev = pos_a0_cur
+pos_a1_prev = pos_a1_cur
+
+xs_ego = []
+ys_ego = []
+thetas_ego = []
+thetas_fused = []
+
+x, y, theta = 0, 0, 0 # Initial position and heading
 
 
+def update_position(x, y, theta, d_left, d_right, W):
+    distance_left = d_left
+    distance_right = d_right
+
+    distance_avg = (distance_left + distance_right) / 2
+    delta_theta = (distance_right - distance_left) / W
+
+    x += distance_avg * math.cos(theta + delta_theta / 2)
+    y += distance_avg * math.sin(theta + delta_theta / 2)
+    theta += delta_theta
+
+    return x, y, theta
 
 
 
@@ -50,10 +85,10 @@ def LQR(axis0, axis1):
     
     pos_init = (axis0.get_pos_turns() * t2m + axis1.get_pos_turns() * t2m)/2
 
-    pitch_angle=IMU1.getPitchAngle() 
-    yaw_angle=IMU1.getYawAngle()
-    pitch_rate=IMU1.getPitchRate()
-    yaw_rate=IMU1.getYawRate()
+    pitch_angle1=IMU1.getPitchAngle() 
+    yaw_angle1=IMU1.getYawAngle()
+    pitch_rate1=IMU1.getPitchRate()
+    yaw_rate1=IMU1.getYawRate()
 
     Xf = np.array([0, 0, 0, 0, 0, 0])
 
@@ -68,10 +103,10 @@ def LQR(axis0, axis1):
     vs = []
     dxdts = []
 
-    pitchAngles = []
-    yawAngles = []
-    pitchRates = []
-    yawRates = []
+    pitchAngles1 = []
+    yawAngles1 = []
+    pitchRates1 = []
+    yawRates1 = []
     
     pitchAngles2 = []
     yawAngles2 = []
@@ -81,8 +116,8 @@ def LQR(axis0, axis1):
     Cl_commands = []
     Cr_commands = []
 
-    while cur_time < 20:
-        time.sleep(0.0001)
+    while cur_time < 30:
+        # time.sleep(0.0001)
         
         cur_time = time.time() - start_time # relative time starts at 0
         dt = cur_time - prev_time
@@ -95,16 +130,30 @@ def LQR(axis0, axis1):
             print("velocity too high: ",axis0.get_vel(),"turns/s")
             break
         
+        
+        # EGO MOTION
+        pos_a0_cur = axis0.get_pos_turns() * t2m - pos_init_a0
+        pos_a1_cur = axis1.get_pos_turns() * t2m - pos_init_a1
+        
+        global pos_a0_prev, pos_a1_prev, x, y, theta
+        
+        pos_a0_delta = pos_a0_cur-pos_a0_prev
+        pos_a1_delta = pos_a1_cur-pos_a1_prev
+
+        
+        
+        # END EGO
+        
         Xf = np.array([0, 0, 0, 0, 0, 0])
 
         x = (axis0.get_pos_turns() * t2m  + axis1.get_pos_turns() * t2m)/2 - pos_init
         v = (axis0.get_vel() * t2m + axis1.get_vel() * t2m)/2
 
         
-        yaw_angle = -IMU1.getYawAngle() # positive for base mount
-        pitch_angle = -IMU1.getPitchAngle() # positive for base mount
-        pitch_rate = IMU1.getPitchRate() # negative for base mount
-        yaw_rate = -IMU1.getYawRate() # negative for base mount
+        yaw_angle1 = -IMU1.getYawAngle() # positive for base mount
+        pitch_angle1 = -IMU1.getPitchAngle() # positive for base mount
+        pitch_rate1 = IMU1.getPitchRate() # negative for base mount
+        yaw_rate1 = -IMU1.getYawRate() # negative for base mount
         
         yaw_angle2 = IMU2.getYawAngle() # positive for base mount
         pitch_angle2 = IMU2.getPitchAngle() # positive for base mount
@@ -112,8 +161,18 @@ def LQR(axis0, axis1):
         yaw_rate2 = -IMU2.getYawRate() # negative for base mount
         
         
+        theta_fused = (theta + yaw_angle2)/2
+        
+        x, y, theta = update_position(x, y, theta_fused, pos_a0_delta, pos_a1_delta, W)
+        xs_ego.append(x)
+        ys_ego.append(y)
+        thetas_ego.append(theta)
+        thetas_fused.append(theta_fused)
+        
+        
+        
 
-        X = np.array([x, v, pitch_angle, pitch_rate, yaw_angle, yaw_rate])
+        X = np.array([x, v, pitch_angle1, pitch_rate2, yaw_angle2, yaw_rate2])
 
         # U = -K @ (X - Xf)
 
@@ -127,8 +186,21 @@ def LQR(axis0, axis1):
         # print("Cr: ", Cr)
         
         
-        axis0.set_trq(Cl)
-        axis1.set_trq(Cr)
+        # instead of anticogging
+        if Cl > 0:
+            axis0.set_trq(Cl+0.25)
+        else:
+            axis0.set_trq(Cl-0.25)
+            
+        if Cr > 0:
+            axis1.set_trq(Cr+0.25)
+        else:
+            axis1.set_trq(Cr-0.25)
+        
+        # axis0.set_trq(Cl)
+        # axis1.set_trq(Cr_commands)
+        
+        
         
 
         times.append(cur_time)
@@ -136,10 +208,10 @@ def LQR(axis0, axis1):
         xs.append(x)
         vs.append(v)
 
-        pitchAngles.append(pitch_angle)
-        yawAngles.append(yaw_angle)
-        pitchRates.append(pitch_rate)
-        yawRates.append(yaw_rate)
+        pitchAngles1.append(pitch_angle1)
+        yawAngles1.append(yaw_angle1)
+        pitchRates1.append(pitch_rate1)
+        yawRates1.append(yaw_rate1)
         
         pitchAngles2.append(pitch_angle2)
         yawAngles2.append(yaw_angle2)
@@ -149,12 +221,13 @@ def LQR(axis0, axis1):
         Cl_commands.append(Cl)
         Cr_commands.append(Cr)
     
-        
+        pos_a0_prev = pos_a0_cur
+        pos_a1_prev = pos_a1_cur
         prev_time = cur_time
 
     brake_both_motors(a0, a1)
 
-    fig, axs = plt.subplots(nrows=9, ncols=1, figsize=(8, 16))
+    fig, axs = plt.subplots(nrows=8, ncols=1, figsize=(8, 16))
 
     # Plot 1
     axs[0].plot(times, dts, label='dts')
@@ -172,25 +245,27 @@ def LQR(axis0, axis1):
     axs[2].set_title("vs")
 
     # Plot 5
-    axs[3].plot(times, pitchAngles, label='Pitch Angles 85')
+    axs[3].plot(times, pitchAngles1, label='Pitch Angles 85')
     axs[3].plot(times, pitchAngles2, label='Pitch Angles 55')
     axs[3].legend()
     axs[3].set_title("Pitch Angles")
 
     # Plot 6
-    axs[4].plot(times, pitchRates, label='pitch rates 85')
+    axs[4].plot(times, pitchRates1, label='pitch rates 85')
     axs[4].plot(times, pitchRates2, label='pitch rates 55')
     axs[4].legend()
     axs[4].set_title("pitch rates")
 
     # Plot 7
-    axs[5].plot(times, yawAngles, label='Yaw Angles 85')
+    axs[5].plot(times, yawAngles1, label='Yaw Angles 85')
     axs[5].plot(times, yawAngles2, label='Yaw Angles 55')
+    axs[5].plot(times, thetas_ego, label='Yaw Angle ego')
+    axs[5].plot(times, thetas_fused, label='Yaw Angle Fused 55 Ego')
     axs[5].legend()
     axs[5].set_title("Yaw Angles")
 
     # Plot 7
-    axs[6].plot(times, yawRates, label='Yaw Rates 85')
+    axs[6].plot(times, yawRates1, label='Yaw Rates 85')
     axs[6].plot(times, yawRates2, label='Yaw Rates 55')
     axs[6].legend()
     axs[6].set_title("Yaw Rates")
@@ -203,6 +278,15 @@ def LQR(axis0, axis1):
 
     plt.tight_layout()
     plt.savefig(plot_dir+ "balance_plots.png")
+    plt.clf()
+    
+    fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(8, 16))
+
+    # Plot 1
+    axs.plot(ys_ego, xs_ego, label='ego')
+    axs.set_title("dts")
+    plt.tight_layout()
+    plt.savefig(plot_dir+ "ego.png")
     plt.clf()
 
 
@@ -217,11 +301,7 @@ def brake_both_motors(axis0, axis1):
     axis1.set_trq(0)
 
         
-a0 = Axis(odrv0.axis0, dir=1)
-a1 = Axis(odrv0.axis1, dir=-1)
 
-a0.setup()
-a1.setup()
 
 LQR(a0, a1)
 
