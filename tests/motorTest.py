@@ -30,7 +30,7 @@ a1 = Axis(odrv0.axis1, dir=-1)
 # print(a1.get_pos_turns())
 # print(a0.get_vel())
 # print(a1.get_vel())
-a0.set_trq(0)
+# a0.set_trq(0)
 a1.set_trq(0)
 # print("RUNNING")
 
