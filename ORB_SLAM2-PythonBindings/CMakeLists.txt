@@ -55,7 +55,7 @@ find_package(NumPy)
 find_package(Boost 1.65.1 REQUIRED COMPONENTS python38)
 find_package(OpenCV REQUIRED)
 find_package(ORB_SLAM2 REQUIRED)
-find_package(Pangolin)
+find_package(Pangolin REQUIRED) 
 
 # RPATH fiddling for the library, so that the installed version can find the linked libraries
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
@@ -67,9 +67,9 @@ ${Boost_INCLUDE_DIRS}
 ${PYTHON_INCLUDE_DIRS}
 ${PYTHON_NUMPY_INCLUDE_DIR}
 )
-if (Pangolin_FOUND)
-  include_directories(${Pangolin_INCLUDE_DIRS})
-endif()
+# if (Pangolin_FOUND)
+include_directories(${Pangolin_INCLUDE_DIRS})
+# endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
@@ -89,6 +89,8 @@ ${PYTHON_LIBRARIES}
 )
 # if (Pangolin_FOUND)
 target_link_libraries(${TARGET_MODULE_NAME} ${Pangolin_LIBRARIES})
+target_link_libraries(${TARGET_MODULE_NAME} ${CUDA_LIBRARIES})
+
 # endif()
 
 install(TARGETS ${TARGET_MODULE_NAME} DESTINATION lib/python3.5/dist-packages)

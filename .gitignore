@@ -1,7 +1,7 @@
 fibre/
 *.pyc
 venv/
-ORB_SLAM2_CUDA/Data/rpi2TestSequences/rgb/*.jpg
-ORB_SLAM2_CUDA/Data/rpi2TestSequences_high/rgb/*.jpg
-ORB_SLAM2_CUDA/Data/rgbd_dataset_freiburg1_desk/depth/*.png
-ORB_SLAM2_CUDA/Data/rgbd_dataset_freiburg1_desk/rgb/*.png
+/Data/rpi2TestSequences/rgb/*.jpg
+/Data/rpi2TestSequences_high/rgb/*.jpg
+/Data/rgbd_dataset_freiburg1_desk/depth/*.png
+/Data/rgbd_dataset_freiburg1_desk/rgb/*.png

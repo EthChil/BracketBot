@@ -1,0 +1,26 @@
+python3 orbslam_mono_tum.py ../../ORB_SLAM2/Vocabulary/ORBvoc.txt ../../ORB_SLAM2/Examples/Monocular/TUM1.yaml ../../ORB_SLAM2/Data/rgbd_dataset_freiburg1_desk
+
+Images in the sequence: 613
+Traceback (most recent call last):
+  File "orbslam_mono_tum.py", line 94, in <module>
+    main(sys.argv[1], sys.argv[2], sys.argv[3])
+  File "orbslam_mono_tum.py", line 32, in main
+    slam.process_image_mono(image, tframe)
+Boost.Python.ArgumentError: Python argument types in
+    None.process_image_mono(System, numpy.ndarray, float)
+did not match C++ signature:
+    process_image_mono(ORBSlamPython {lvalue}, cv::Mat, double)
+
+yo penis
+
+
+Start processing sequence ...
+Images in the sequence: 613
+libGL error: No matching fbConfigs or visuals found
+libGL error: failed to load driver: swrast
+terminate called after throwing an instance of 'std::runtime_error'
+  what():  Pangolin X11: Failed to create an OpenGL context
+Aborted (core dumped)
+
+$ cd /path/to/ORB_SLAM2_CUDA
+$ ./build/mono_tum Vocabulary/ORBvoc.txt Examples/Monocular/TUM1.yaml Data/rgbd_dataset_freiburg1_desk true
