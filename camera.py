@@ -36,4 +36,4 @@ def save_image(filename="output.jpg"):
         print("Error: Unable to open camera")
 
 if __name__ == "__main__":
-    save_image("output.jpg")
+    save_image("output_10.jpg")

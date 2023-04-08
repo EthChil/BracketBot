@@ -6,6 +6,7 @@ import time
 import cv2
 
 
+
 def main(vocab_path, settings_path, sequence_path):
 
     rgb_filenames, timestamps = load_images(sequence_path)
