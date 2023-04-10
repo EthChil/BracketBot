@@ -12,9 +12,10 @@ class Axis:
             self.axis.requested_state = AXIS_STATE_ENCODER_INDEX_SEARCH
             while self.axis.current_state != AXIS_STATE_IDLE:
                 time.sleep(0.1)
-
-        # print(f"{self.axis} encoder is indexed")
-        self.axis.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+                
+        if self.axis.current_state != AXIS_STATE_CLOSED_LOOP_CONTROL:
+            self.axis.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+            
         # self.axis.controller.input_vel = 0
         self.axis.controller.input_torque = 0
         self.set_trq(0)

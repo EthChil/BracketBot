@@ -9,52 +9,17 @@ import math
 
 from odriveDriver import Axis
 plt.switch_backend('Agg')
-
 plot_dir = './plots/'
-
-IMU1 = IMU.IMU_BNO085()
-# IMU.restoreCalibrationConstants([0, 0, 85, 0, 1, 0, 166, 1, 77, 1, 176, 1, 1, 0, 0, 0, 0, 0, 232, 3, 178, 1]) only for bno55
-IMU1.setupIMU()
-
-IMU2 = IMU.IMU_BNO055(0, 40)
-IMU2.restoreCalibrationConstants([0, 0, 85, 0, 1, 0, 166, 1, 77, 1, 176, 1, 1, 0, 0, 0, 0, 0, 232, 3, 178, 1]) #only for bno55
-IMU2.setupIMU()
-
-odrv0 = odrive.find_any()
 
 ref_time = time.time()
 t2m = 0.528 #turns to meters
-
 
 #with ivans fix
 #Q = diag([100 1 10 1 10 1]); % 'x', 'v', 'θ', 'ω', 'δ', "δ'
 #R = diag([3 3]); % Torque cost Cθ,Cδ
 K = np.array([[-5.77, -7.74, -42.86, -16.89, 0.00, 0.00],[-0.00, -0.00, -0.00, -0.00, 1.83, 1.77]] )
 
-
-#not care about pos
-#Q = diag([1 1 10 1 10 1]); % 'x', 'v', 'θ', 'ω', 'δ', "δ'
-#R = diag([3 3]); % Torque cost Cθ,Cδ
-# K = np.array([[-0.58, -2.57, -26.38, -9.95, 0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 1.83, 1.77]] )
-
-
-# K = np.array([[-4.47, -6.70, -40.30, -15.81, -0.00, -0.00],[-0.00, -0.00, -0.00, -0.00, 3.16, 2.61]] )
-
 W = 0.567   # Distance between wheels in meters
-
-a0 = Axis(odrv0.axis0, dir=1)
-a1 = Axis(odrv0.axis1, dir=-1)
-
-# a0.setup()
-# a1.setup()
-
-pos_init_a0 = a0.get_pos_turns() * t2m
-pos_init_a1 = a1.get_pos_turns() * t2m
-
-pos_a0_cur = a0.get_pos_turns() * t2m - pos_init_a0
-pos_a1_cur = a1.get_pos_turns() * t2m - pos_init_a1
-pos_a0_prev = pos_a0_cur
-pos_a1_prev = pos_a1_cur
 
 xs_ego = []
 ys_ego = []
@@ -80,9 +45,23 @@ def update_position(x, y, theta, d_left, d_right, W):
 
 
 def LQR(axis0, axis1):
-    # read initial values to offset
-    x_init = (axis0.get_pos_turns() * t2m + axis1.get_pos_turns() * t2m)/2
     
+    IMU1 = IMU.IMU_BNO085()
+    IMU2 = IMU.IMU_BNO055(0, 40)
+
+    odrv0 = odrive.find_any()
+    axis0 = Axis(odrv0.axis0, dir=1)
+    axis1 = Axis(odrv0.axis1, dir=-1)
+    
+    pos_init_a0 = axis0.get_pos_turns() * t2m
+    pos_init_a1 = axis1.get_pos_turns() * t2m
+
+    pos_a0_cur = axis0.get_pos_turns() * t2m - pos_init_a0
+    pos_a1_cur = axis1.get_pos_turns() * t2m - pos_init_a1
+    pos_a0_prev = pos_a0_cur
+    pos_a1_prev = pos_a1_cur
+    
+    # read initial values to offset
     pos_init = (axis0.get_pos_turns() * t2m + axis1.get_pos_turns() * t2m)/2
 
     pitch_angle1=IMU1.getPitchAngle() 
@@ -117,8 +96,6 @@ def LQR(axis0, axis1):
     Cr_commands = []
 
     while cur_time < 30:
-        # time.sleep(0.0001)
-        
         cur_time = time.time() - start_time # relative time starts at 0
         dt = cur_time - prev_time
         
@@ -135,13 +112,8 @@ def LQR(axis0, axis1):
         pos_a0_cur = axis0.get_pos_turns() * t2m - pos_init_a0
         pos_a1_cur = axis1.get_pos_turns() * t2m - pos_init_a1
         
-        global pos_a0_prev, pos_a1_prev, x, y, theta
-        
         pos_a0_delta = pos_a0_cur-pos_a0_prev
         pos_a1_delta = pos_a1_cur-pos_a1_prev
-
-        
-        
         # END EGO
         
         Xf = np.array([0, 0, 0, 0, 0, 0])
@@ -169,22 +141,12 @@ def LQR(axis0, axis1):
         thetas_ego.append(theta)
         thetas_fused.append(theta_fused)
         
-        
-        
-
         X = np.array([x, v, pitch_angle1, pitch_rate2, yaw_angle2, yaw_rate2])
 
-        # U = -K @ (X - Xf)
-
         D = np.array([[0.5, 0.5],[0.5, -0.5]])
-        # print("K mat: ", K)
-        # print("X mat: ", X)
-        # print("Xf mat: ", Xf)
-        # print("D mat:", D)
+
         Cl, Cr = D @ (-K @ (X - Xf))
-        # print("Cl: ", Cl)
-        # print("Cr: ", Cr)
-        
+
         
         # instead of anticogging
         if Cl > 0:
@@ -199,8 +161,6 @@ def LQR(axis0, axis1):
         
         # axis0.set_trq(Cl)
         # axis1.set_trq(Cr_commands)
-        
-        
         
 
         times.append(cur_time)
@@ -225,84 +185,66 @@ def LQR(axis0, axis1):
         pos_a1_prev = pos_a1_cur
         prev_time = cur_time
 
-    brake_both_motors(a0, a1)
+    # brake_both_motors(a0, a1)
 
-    fig, axs = plt.subplots(nrows=8, ncols=1, figsize=(8, 16))
+    # fig, axs = plt.subplots(nrows=8, ncols=1, figsize=(8, 16))
 
-    # Plot 1
-    axs[0].plot(times, dts, label='dts')
-    axs[0].legend()
-    axs[0].set_title("dts")
+    # # Plot 1
+    # axs[0].plot(times, dts, label='dts')
+    # axs[0].legend()
+    # axs[0].set_title("dts")
 
-    # Plot 2
-    axs[1].plot(times, xs, label='xs')
-    axs[1].legend()
-    axs[1].set_title("xs")
+    # # Plot 2
+    # axs[1].plot(times, xs, label='xs')
+    # axs[1].legend()
+    # axs[1].set_title("xs")
 
-    # Plot 3
-    axs[2].plot(times, vs, label='vs')
-    axs[2].legend()
-    axs[2].set_title("vs")
+    # # Plot 3
+    # axs[2].plot(times, vs, label='vs')
+    # axs[2].legend()
+    # axs[2].set_title("vs")
 
-    # Plot 5
-    axs[3].plot(times, pitchAngles1, label='Pitch Angles 85')
-    axs[3].plot(times, pitchAngles2, label='Pitch Angles 55')
-    axs[3].legend()
-    axs[3].set_title("Pitch Angles")
+    # # Plot 5
+    # axs[3].plot(times, pitchAngles1, label='Pitch Angles 85')
+    # axs[3].plot(times, pitchAngles2, label='Pitch Angles 55')
+    # axs[3].legend()
+    # axs[3].set_title("Pitch Angles")
 
-    # Plot 6
-    axs[4].plot(times, pitchRates1, label='pitch rates 85')
-    axs[4].plot(times, pitchRates2, label='pitch rates 55')
-    axs[4].legend()
-    axs[4].set_title("pitch rates")
+    # # Plot 6
+    # axs[4].plot(times, pitchRates1, label='pitch rates 85')
+    # axs[4].plot(times, pitchRates2, label='pitch rates 55')
+    # axs[4].legend()
+    # axs[4].set_title("pitch rates")
 
-    # Plot 7
-    axs[5].plot(times, yawAngles1, label='Yaw Angles 85')
-    axs[5].plot(times, yawAngles2, label='Yaw Angles 55')
-    axs[5].plot(times, thetas_ego, label='Yaw Angle ego')
-    axs[5].plot(times, thetas_fused, label='Yaw Angle Fused 55 Ego')
-    axs[5].legend()
-    axs[5].set_title("Yaw Angles")
+    # # Plot 7
+    # axs[5].plot(times, yawAngles1, label='Yaw Angles 85')
+    # axs[5].plot(times, yawAngles2, label='Yaw Angles 55')
+    # axs[5].plot(times, thetas_ego, label='Yaw Angle ego')
+    # axs[5].plot(times, thetas_fused, label='Yaw Angle Fused 55 Ego')
+    # axs[5].legend()
+    # axs[5].set_title("Yaw Angles")
 
-    # Plot 7
-    axs[6].plot(times, yawRates1, label='Yaw Rates 85')
-    axs[6].plot(times, yawRates2, label='Yaw Rates 55')
-    axs[6].legend()
-    axs[6].set_title("Yaw Rates")
+    # # Plot 7
+    # axs[6].plot(times, yawRates1, label='Yaw Rates 85')
+    # axs[6].plot(times, yawRates2, label='Yaw Rates 55')
+    # axs[6].legend()
+    # axs[6].set_title("Yaw Rates")
 
-    axs[7].plot(times, Cl_commands, label='torque right')
-    axs[7].plot(times, Cr_commands, label='torque left')
-    axs[7].legend()
-    axs[7].set_title("Balance Torques")
+    # axs[7].plot(times, Cl_commands, label='torque right')
+    # axs[7].plot(times, Cr_commands, label='torque left')
+    # axs[7].legend()
+    # axs[7].set_title("Balance Torques")
 
 
-    plt.tight_layout()
-    plt.savefig(plot_dir+ "balance_plots.png")
-    plt.clf()
+    # plt.tight_layout()
+    # plt.savefig(plot_dir+ "balance_plots.png")
+    # plt.clf()
     
-    fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(8, 16))
+    # fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(8, 16))
 
-    # Plot 1
-    axs.plot(ys_ego, xs_ego, label='ego')
-    axs.set_title("dts")
-    plt.tight_layout()
-    plt.savefig(plot_dir+ "ego.png")
-    plt.clf()
-
-
-
-def brake_both_motors(axis0, axis1):
-
-    while abs(axis0.get_vel()) > 0.05 and abs(axis1.get_vel()) > 0.05:
-        axis0.set_trq(-0.5 if axis0.get_vel() > 0 else 0.5)
-        axis1.set_trq(-0.5 if axis1.get_vel() > 0 else 0.5)
-        
-    axis0.set_trq(0)
-    axis1.set_trq(0)
-
-        
-
-
-LQR(a0, a1)
-
-brake_both_motors(a0, a1)
+    # # Plot 1
+    # axs.plot(ys_ego, xs_ego, label='ego')
+    # axs.set_title("dts")
+    # plt.tight_layout()
+    # plt.savefig(plot_dir+ "ego.png")
+    # plt.clf()

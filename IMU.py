@@ -21,7 +21,7 @@ from Adafruit_CircuitPython_BNO08x.adafruit_bno08x.i2c import BNO08X_I2C
 maxI2CBusses = 2
 
 class IMU_BNO085:
-    setup = 0
+    setup = 1
 
     # initialize the IMU by opening the I2C connection and zeroing yaw
     def __init__(self):
