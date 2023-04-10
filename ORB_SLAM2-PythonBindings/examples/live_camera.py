@@ -5,7 +5,7 @@ import orbslam2
 import time
 import cv2
 
-def gstreamer_pipeline(sensor_id=0, capture_width=1280, capture_height=720, display_width=640, display_height=360, framerate=20, flip_method=0):
+def gstreamer_pipeline(sensor_id=0, capture_width=1280, capture_height=720, display_width=640, display_height=360, framerate=10, flip_method=0):
     return (
         "nvarguscamerasrc sensor-id=%d !"
         "video/x-raw(memory:NVMM), width=(int)%d, height=(int)%d, framerate=(fraction)%d/1 ! "
@@ -52,8 +52,8 @@ def main(vocab_path, settings_path):
             loop_end_time = time.time()
             elapsed_time = loop_end_time - loop_start_time
 
-            if elapsed_time < 0.05:
-                time.sleep(0.05 - elapsed_time)
+            if elapsed_time < 0.1:
+                time.sleep(0.1 - elapsed_time)
     else:
         print("Error: Unable to open camera")
             

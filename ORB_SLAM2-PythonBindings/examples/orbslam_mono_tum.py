@@ -30,9 +30,10 @@ def main(vocab_path, settings_path, sequence_path):
             return 1
 
         t1 = time.time()
-                
-        print(os.path.join(sequence_path, rgb_filenames[idx]))
-        print(image, len(image), tframe)
+        
+        print(image.shape, image.dtype, tframe)
+        # print(os.path.join(sequence_path, rgb_filenames[idx]))
+        # print(image, len(image), tframe)
         
         slam.process_image_mono(image, tframe)
         t2 = time.time()

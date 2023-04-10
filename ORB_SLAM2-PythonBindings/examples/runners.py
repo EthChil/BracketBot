@@ -52,7 +52,7 @@ class OrbslamMono:
         image_filenames, timestamps = self.load_images()
         num_images = len(image_filenames)
 
-        self.slam.set_use_viewer(True)
+        self.slam.set_use_viewer(False)
         self.slam.initialize()
 
         times_track = [0 for _ in range(num_images)]

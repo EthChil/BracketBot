@@ -1,10 +1,7 @@
 #define PY_ARRAY_UNIQUE_SYMBOL pbcvt_ARRAY_API
 #include <opencv2/core/core.hpp>
 #include <pyboostcvconverter/pyboostcvconverter.hpp>
-// #include <ORB_SLAM2/KeyFrame.h>
-// #include <ORB_SLAM2/Converter.h>
-// #include <ORB_SLAM2/Tracking.h>
-// #include <ORB_SLAM2/MapPoint.h>
+
 
 #include <KeyFrame.h>
 #include <Converter.h>
@@ -22,7 +19,7 @@ static void init_ar() {
     Py_Initialize();
 
     import_array();
-    return NUMPY_IMPORT_ARRAY_RETVAL;
+    return NULL;
 }
 
 BOOST_PYTHON_MODULE(orbslam2)
@@ -61,7 +58,14 @@ BOOST_PYTHON_MODULE(orbslam2)
         .def("get_keyframe_points", &ORBSlamPython::getKeyframePoints)
         .def("get_trajectory_points", &ORBSlamPython::getTrajectoryPoints)
         .def("get_tracked_mappoints", &ORBSlamPython::getTrackedMappoints)
-        // .def("get_tracking_state", &ORBSlamPython::getTrackingState)
+        .def("get_floor_mappoints", &ORBSlamPython::getFloorMappoints)
+        .def("get_all_mappoints", &ORBSlamPython::getAllMappoints)
+        .def("get_tracked_keypoints", &ORBSlamPython::getTrackedKeypoints)
+        .def("set_floor_mappoints", &ORBSlamPython::setFloorMappoints)
+        .def("get_intrinsics_matrix", &ORBSlamPython::getIntrinsicsMatrix)
+        .def("get_extrinsics_matrix", &ORBSlamPython::getExtrinsicsMatrix)
+        .def("set_ground_plane_params", &ORBSlamPython::setGroundPlaneParams)
+        .def("get_tracking_state", &ORBSlamPython::getTrackingState)
         .def("get_num_features", &ORBSlamPython::getNumFeatures)
         .def("get_num_matched_features", &ORBSlamPython::getNumMatches)
         .def("save_settings", &ORBSlamPython::saveSettings)
@@ -73,23 +77,23 @@ BOOST_PYTHON_MODULE(orbslam2)
 }
 
 ORBSlamPython::ORBSlamPython(std::string vocabFile, std::string settingsFile, ORB_SLAM2::System::eSensor sensorMode)
-    : vocabluaryFile(vocabFile),
-    settingsFile(settingsFile),
-    sensorMode(sensorMode),
-    system(nullptr),
-    bUseViewer(false),
-    bUseRGB(true)
+    : vocabularyFile(vocabFile),
+      settingsFile(settingsFile),
+      sensorMode(sensorMode),
+      system(nullptr),
+      bUseViewer(false),
+      bUseRGB(true)
 {
     
 }
 
 ORBSlamPython::ORBSlamPython(const char* vocabFile, const char* settingsFile, ORB_SLAM2::System::eSensor sensorMode)
-    : vocabluaryFile(vocabFile),
-    settingsFile(settingsFile),
-    sensorMode(sensorMode),
-    system(nullptr),
-    bUseViewer(false),
-    bUseRGB(true)
+    : vocabularyFile(vocabFile),
+      settingsFile(settingsFile),
+      sensorMode(sensorMode),
+      system(nullptr),
+      bUseViewer(false),
+      bUseRGB(true)
 {
 
 }
@@ -100,7 +104,7 @@ ORBSlamPython::~ORBSlamPython()
 
 bool ORBSlamPython::initialize()
 {
-    system = std::make_shared<ORB_SLAM2::System>(vocabluaryFile, settingsFile, sensorMode, bUseViewer);
+    system = std::make_shared<ORB_SLAM2::System>(vocabularyFile, settingsFile, sensorMode, bUseViewer);
     return true;
 }
 
@@ -220,14 +224,14 @@ void ORBSlamPython::shutdown()
     }
 }
 
-// ORB_SLAM2::Tracking::eTrackingState ORBSlamPython::getTrackingState() const
-// {
-//     if (system)
-//     {
-//         return static_cast<ORB_SLAM2::Tracking::eTrackingState>(system->GetTrackingState());
-//     }
-//     return ORB_SLAM2::Tracking::eTrackingState::SYSTEM_NOT_READY;
-// }
+ORB_SLAM2::Tracking::eTrackingState ORBSlamPython::getTrackingState() const
+{
+    // if (system)
+    // {
+    //     return static_cast<ORB_SLAM2::Tracking::eTrackingState>(system->GetTrackingState());
+    // }
+    return ORB_SLAM2::Tracking::eTrackingState::SYSTEM_NOT_READY;
+}
 
 unsigned int ORBSlamPython::getNumFeatures() const
 {
@@ -321,22 +325,214 @@ boost::python::list ORBSlamPython::getTrackedMappoints() const
     {
         return boost::python::list();
     }
-    
-    // This is copied from the ORB_SLAM2 System.SaveTrajectoryKITTI function, with some changes to output a python tuple.
-    // vector<ORB_SLAM2::MapPoint*> Mps = system->GetTrackedMapPoints();
-    vector<ORB_SLAM2::MapPoint*> Mps = system->GetmpMapAllMapPoints();
-    
+
+    vector<ORB_SLAM2::MapPoint*> Mps = system->GetTracker()->mCurrentFrame.mvpMapPoints;
+
     boost::python::list map_points;
-    for(size_t i=0; i<Mps.size(); i++)    {
-        cv::Mat wp = Mps[i]->GetWorldPos();
-        map_points.append(boost::python::make_tuple(
-            wp.at<float>(0,0),
-            wp.at<float>(1,0),
-            wp.at<float>(2,0)                          
+    for(size_t i=0; i<Mps.size(); i++)
+    {
+        if (Mps[i] != NULL)
+        {
+            cv::Mat wp = Mps[i]->GetWorldPos();
+            map_points.append(boost::python::make_tuple(
+                    wp.at<float>(0, 0),
+                    wp.at<float>(1, 0),
+                    wp.at<float>(2, 0)
             ));
         }
+    }
 
-        return map_points;
+    return map_points;
+}
+
+boost::python::list ORBSlamPython::getFloorMappoints() const {
+    if (!system)
+    {
+        return boost::python::list();
+    }
+
+    vector<ORB_SLAM2::MapPoint*> Mps = system->GetMap()->GetAllMapPoints();
+
+    boost::python::list map_points;
+    for(size_t i=0; i<Mps.size(); i++)
+    {
+        if (Mps[i] != NULL && Mps[i]->isFloorPoint())
+        {
+            cv::Mat wp = Mps[i]->GetWorldPos();
+            map_points.append(boost::python::make_tuple(
+                    wp.at<float>(0, 0),
+                    wp.at<float>(1, 0),
+                    wp.at<float>(2, 0)
+            ));
+        }
+    }
+
+    return map_points;
+}
+
+boost::python::list ORBSlamPython::getAllMappoints() const
+{
+    if (!system)
+    {
+        return boost::python::list();
+    }
+
+    vector<ORB_SLAM2::MapPoint*> Mps = system->GetMap()->GetAllMapPoints();
+
+    boost::python::list map_points;
+    for(size_t i=0; i<Mps.size(); i++)
+    {
+        if (Mps[i] != NULL)
+        {
+            cv::Mat wp = Mps[i]->GetWorldPos();
+            map_points.append(boost::python::make_tuple(
+                    wp.at<float>(0, 0),
+                    wp.at<float>(1, 0),
+                    wp.at<float>(2, 0)
+            ));
+        }
+    }
+
+    return map_points;
+}
+
+boost::python::list ORBSlamPython::getTrackedKeypoints() const
+{
+    if (!system)
+    {
+        return boost::python::list();
+    }
+
+    // This code is based on the display code in FrameDrawer.cc, with a little extra safety logic to check the length of the vectors.
+    ORB_SLAM2::Tracking* pTracker = system->GetTracker();
+    unsigned int num = pTracker->mCurrentFrame.mvKeys.size();
+
+    boost::python::list key_points;
+    for(unsigned int i = 0; i < num; ++i)
+    {
+        ORB_SLAM2::MapPoint* pMP = pTracker->mCurrentFrame.mvpMapPoints[i];
+        if(pMP && !pTracker->mCurrentFrame.mvbOutlier[i] && pMP->Observations() > 0)
+        {
+            cv::KeyPoint kp = pTracker->mCurrentFrame.mvKeys[i];
+            key_points.append(boost::python::make_tuple(kp.pt.x, kp.pt.y));
+        }
+    }
+
+    return key_points;
+}
+
+void ORBSlamPython::setFloorMappoints(boost::python::list floorIndices)
+{
+    if (!system)
+    {
+        return;
+    }
+    vector<ORB_SLAM2::MapPoint*> Mps = system->GetTracker()->mCurrentFrame.mvpMapPoints;
+
+    int j = 0;
+    int k = 0;
+    for(size_t i=0; i<Mps.size(); i++)
+    {
+        if (Mps[i] != NULL)
+        {
+            if (j == floorIndices[k])
+            {
+                Mps[i]->setFloorPoint();
+                k++;
+                if (k >= len(floorIndices))
+                    return;
+            }
+            j++;
+        }
+    }
+}
+
+void ORBSlamPython::setGroundPlaneParams(float c0, float c1, float c2)
+{
+    if (!system)
+    {
+        return;
+    }
+    system->GetMap()->setGroundPlaneParams(c0, c1, c2);
+}
+
+PyObject* ORBSlamPython::getIntrinsicsMatrix() const
+{
+    if (!system)
+    {
+        return pbcvt::fromMatToNDArray(cv::Mat());
+    }
+
+    cv::Mat K = system->GetTracker()->mInitialFrame.mK;
+    return pbcvt::fromMatToNDArray(K);
+}
+
+PyObject* ORBSlamPython::getExtrinsicsMatrix() const
+{
+    if (!system)
+    {
+        return pbcvt::fromMatToNDArray(cv::Mat());
+    }
+
+    cv::Mat Tcw = system->GetTracker()->mCurrentFrame.mTcw;
+    if (Tcw.empty())
+        return pbcvt::fromMatToNDArray(cv::Mat());
+
+    // Get the camera pose the same way as done in MapDrawer.cc
+    cv::Mat Rwc(3,3,CV_32F);
+    cv::Mat twc(3,1,CV_32F);
+    cv::Mat Rt(3,4,CV_32F);
+    Rwc = Tcw.rowRange(0,3).colRange(0,3).t();
+    twc = -Rwc*Tcw.rowRange(0,3).col(3);
+
+    Rt.at<float>(0, 0) = Rwc.at<float>(0, 0);
+    Rt.at<float>(1, 0) = Rwc.at<float>(1, 0);
+    Rt.at<float>(2, 0) = Rwc.at<float>(2, 0);
+    Rt.at<float>(0, 1) = Rwc.at<float>(0, 1);
+    Rt.at<float>(1, 1) = Rwc.at<float>(1, 1);
+    Rt.at<float>(2, 1) = Rwc.at<float>(2, 1);
+    Rt.at<float>(0, 2) = Rwc.at<float>(0, 2);
+    Rt.at<float>(1, 2) = Rwc.at<float>(1, 2);
+    Rt.at<float>(2, 2) = Rwc.at<float>(2, 2);
+
+    Rt.at<float>(0, 3) = twc.at<float>(0);
+    Rt.at<float>(1, 3) = twc.at<float>(1);
+    Rt.at<float>(2, 3) = twc.at<float>(2);
+    return pbcvt::fromMatToNDArray(Rt);
+
+//    // Transform all keyframes so that the first keyframe is at the origin.
+//    // After a loop closure the first keyframe might not be at the origin.
+//    // Of course, if we have no keyframes, then just use the identity matrix.
+//    cv::Mat Two = cv::Mat::eye(4,4,CV_32F);
+//    vector<ORB_SLAM2::KeyFrame*> vpKFs = system->GetKeyFrames();
+//    if (!vpKFs.empty()) {
+//        Two = vpKFs[0]->GetPoseInverse();
+//    }
+//    ORB_SLAM2::KeyFrame* pKF = *system->GetTracker()->mlpReferences.end();
+//    ORB_SLAM2::KeyFrame* pKF = system->GetTracker()->mCurrentFrame.mpReferenceKF;
+//    cv::Mat Trw = cv::Mat::eye(4,4,CV_32F);
+//
+//    while(pKF != NULL && pKF->isBad())
+//    {
+//        ORB_SLAM2::KeyFrame* pKFParent;
+//
+//        // std::cout << "bad parent" << std::endl;
+//        Trw = Trw*pKF->mTcp;
+//        pKFParent = pKF->GetParent();
+//        if (pKFParent == pKF) {
+//            // We've found a frame that is it's own parent, presumably a root or something. Break out
+//            break;
+//        } else {
+//            pKF = pKFParent;
+//        }
+//    }
+//    if (pKF != NULL && !pKF->isBad()) {
+//        Trw = Trw*pKF->GetPose()*Two;
+//
+//        cv::Mat Tcw = (*lit)*Trw;
+//    }
+
+
 }
 
 boost::python::list ORBSlamPython::getTrajectoryPoints() const
@@ -354,9 +550,9 @@ boost::python::list ORBSlamPython::getTrajectoryPoints() const
     // After a loop closure the first keyframe might not be at the origin.
     // Of course, if we have no keyframes, then just use the identity matrix.
     cv::Mat Two = cv::Mat::eye(4,4,CV_32F);
-    // if (vpKFs.size() > 0) {
-    //     cv::Mat Two = vpKFs[0]->GetPoseInverse();
-    // }
+    if (vpKFs.size() > 0) {
+        cv::Mat Two = vpKFs[0]->GetPoseInverse();
+    }
 
     boost::python::list trajectory;
 

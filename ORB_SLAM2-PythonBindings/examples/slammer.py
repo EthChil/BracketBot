@@ -1,6 +1,6 @@
+from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import RANSACRegressor
 import numpy as np
-from skimage.measure import ransac
-from plane_model import Plane3dModel
 
 
 def plot_floor_pts(floor_mps, plane_model):
@@ -16,8 +16,8 @@ def plot_floor_pts(floor_mps, plane_model):
     xx = np.linspace(x.min(), x.max(), n)
     yy = np.linspace(y.min(), y.max(), n)
     X, Y = np.meshgrid(xx, yy)
-    args = (X.flatten(), Y.flatten())
-    Z = plane_model.predict(plane_model.params, *args).reshape(X.shape)
+    Z = c0*X.flatten() + c1*Y.flatten() + c2
+    Z = Z.reshape(X.shape)
     ax.plot_surface(X, Y, Z, shade=False)
 
     ax.set_xlabel('X Label')
@@ -53,18 +53,22 @@ def get_floor_points_mps(mps):
 
 
 def fit_plane_model(pts):
-    plane_model, inliers = ransac(pts, Plane3dModel,
-                                  min_samples=10,
-                                  residual_threshold=0.01,
-                                  max_trials=1000)
-    if plane_model is None:
-        print('ERROR: Plane model is None')
-        print(plane_model)
-    plane_model.estimate(pts[inliers])
-    return plane_model
+    lin_reg = LinearRegression(fit_intercept=True)
+    ransac = RANSACRegressor(base_estimator=lin_reg,
+                             min_samples=10,
+                             residual_threshold=0.01,
+                             max_trials=1000)
+    xy = pts[:,:2]
+    z = pts[:,2]
+    ransac.fit(xy, z)
+    
+    c0, c1 = ransac.estimator_.coef_
+    c2 =  ransac.estimator_.intercept_
+    coefs = [float(c0), float(c1), float(c2)]
+    return coefs
 
 
-def uv_to_plane3d(pts2d, K, Rt, plane_model):
+def uv_to_plane3d(pts2d, K, Rt, plane_coefs):
     """
     :param pts2d: points to project (u, v)
     :param K: Camera intrinsics matrix
@@ -75,7 +79,7 @@ def uv_to_plane3d(pts2d, K, Rt, plane_model):
 
     pts3d = []
 
-    c0, c1, c2 = plane_model.params
+    c0, c1, c2 = plane_coefs
     fx = K[0, 0]
     fy = K[1, 1]
     cx = K[0, 2]
@@ -96,7 +100,7 @@ def uv_to_plane3d(pts2d, K, Rt, plane_model):
         assert np.linalg.det(A) != 0
 
         X, Y, z = np.linalg.inv(A) @ (Q+b)
-        Z = plane_model.predict((c0, c1, c2), X, Y)
+        Z = c0*X + c1*Y + c2
         pt3d = np.array([X, Y, Z])
         # Check that z is correct
         # assert np.allclose(z*P - Q, pt3d, rtol=1e-6)
@@ -111,13 +115,13 @@ def uv_to_plane3d(pts2d, K, Rt, plane_model):
     return np.stack(pts3d)
 
 
-def plane3d_to_2d(pts3d, plane_model):
+def plane3d_to_2d(pts3d, plane_coefs):
     """
     :param pts3d: points to project (x, y, z)
     :param plane_model: Plane3DModel object, output of fit_plane_model()
     :return: 2D points representing projection of pts3d onto the ground plane
     """
-    c0, c1, c2 = plane_model.params
+    c0, c1, c2 = plane_coefs
     origin = np.array([0, 0, c2])
 
     # Forward, right and normal direction vectors for the ground plane
@@ -132,8 +136,8 @@ def plane3d_to_2d(pts3d, plane_model):
     return pts2d
 
 
-def project_on_plane(pts3d, plane_model):
-    c0, c1, c2 = plane_model.params
+def project_on_plane(pts3d, plane_coefs):
+    c0, c1, c2 = plane_coefs
     n = np.array([-c0, -c1, 1])
     n /= np.linalg.norm(n)
 
@@ -152,5 +156,5 @@ if __name__ == '__main__':
     all_mps = np.loadtxt('all_mappoints.txt')
     floor_mps = np.loadtxt('floor_mappoints.txt')
 
-    plane_model = fit_plane_model(floor_mps)
-    plot_floor_pts(floor_mps, plane_model)
+    plane_coefs = fit_plane_model(floor_mps)
+    plot_floor_pts(floor_mps, plane_coefs)

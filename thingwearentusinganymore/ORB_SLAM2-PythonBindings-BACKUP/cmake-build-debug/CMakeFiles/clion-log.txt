@@ -1,0 +1,29 @@
+/home/iyevenko/Downloads/clion-2021.1.2/bin/cmake/linux/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" /home/iyevenko/Documents/ORB_SLAM2-PythonBindings
+CMake Deprecation Warning at CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 2.8.12 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value or use a ...<max> suffix to tell
+  CMake that the project does not need compatibility with older versions.
+
+
+Build type: Debug
+-- Using flag -std=c++11.
+-- Found PythonLibs: /home/iyevenko/.pyenv/versions/3.8.10/lib (found suitable version "3.8.10", minimum required is "3.8") 
+CMake Deprecation Warning at cmake_modules/FindNumPy.cmake:32 (cmake_minimum_required):
+  Compatibility with CMake < 2.8.12 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value or use a ...<max> suffix to tell
+  CMake that the project does not need compatibility with older versions.
+Call Stack (most recent call first):
+  CMakeLists.txt:35 (find_package)
+
+
+-- Found Boost: /usr/lib/x86_64-linux-gnu/cmake/Boost-1.71.0/BoostConfig.cmake (found suitable version "1.71.0", minimum required is "1.71.0") found components: python38 
+-- Found OpenCV: /usr/local (found version "3.2.0") 
+-- Found ORB_SLAM2: /usr/local/lib/libORB_SLAM2.so  
+-- Configuring done
+WARNING: Target "orbslam2" requests linking to directory "/home/iyevenko/.pyenv/versions/3.8.10/lib".  Targets may link only to libraries.  CMake is dropping the item.
+-- Generating done
+-- Build files have been written to: /home/iyevenko/Documents/ORB_SLAM2-PythonBindings/cmake-build-debug
