@@ -5,7 +5,7 @@ import orbslam2
 import time
 import cv2
 
-def gstreamer_pipeline(sensor_id=0, capture_width=1920, capture_height=1080, display_width=960, display_height=540, framerate=30, flip_method=0):
+def gstreamer_pipeline(sensor_id=0, capture_width=1280, capture_height=720, display_width=640, display_height=360, framerate=20, flip_method=0):
     return (
         "nvarguscamerasrc sensor-id=%d !"
         "video/x-raw(memory:NVMM), width=(int)%d, height=(int)%d, framerate=(fraction)%d/1 ! "
@@ -46,8 +46,8 @@ def main(vocab_path, settings_path):
             if ret_val:
                 # cv2.imwrite(filename, frame)
                 t1 = time.time()
-                resized_frame = cv2.resize(frame, (960, 540))
-                slam.process_image_mono(resized_frame, t1)
+                # resized_frame = cv2.resize(frame, (960, 540))
+                slam.process_image_mono(frame, t1)
                 
             loop_end_time = time.time()
             elapsed_time = loop_end_time - loop_start_time
