@@ -1,7 +1,6 @@
 fibre/
 *.pyc
-venv/
-/Data/rpi2TestSequences/rgb/*.jpg
-/Data/rpi2TestSequences_high/rgb/*.jpg
-/Data/rgbd_dataset_freiburg1_desk/depth/*.png
-/Data/rgbd_dataset_freiburg1_desk/rgb/*.png
+venv/git 
+*/Data/*
+*/Examples/ROS/*
+*/Vocabulary/
