@@ -1,0 +1,42 @@
+import IMU
+import time
+
+def start_imu(IMU85_dict, IMU55_dict, imu_setup_done, termination_event):
+
+    print("setting up IMU's in imu_process.py")
+    IMU1 = IMU.IMU_BNO085()
+    IMU1.setupIMU()
+
+    IMU2 = IMU.IMU_BNO055(0, 40)
+    IMU2.restoreCalibrationConstants([0, 0, 85, 0, 1, 0, 166, 1, 77, 1, 176, 1, 1, 0, 0, 0, 0, 0, 232, 3, 178, 1]) #only for bno55
+    IMU2.setupIMU()
+    print("IMU setups done")
+    imu_setup_done.set() 
+    
+    while not termination_event.is_set():
+        time.sleep(0.01)
+        yaw_angle1 = -IMU1.getYawAngle()
+        pitch_angle1 = -IMU1.getPitchAngle()
+        pitch_rate1 = IMU1.getPitchRate()
+        yaw_rate1 = -IMU1.getYawRate()
+        
+        yaw_angle2 = IMU2.getYawAngle()
+        pitch_angle2 = IMU2.getPitchAngle()
+        pitch_rate2 = -IMU2.getPitchRate()
+        yaw_rate2 = -IMU2.getYawRate()
+        
+        IMU85_dict['yaw_angle'] = yaw_angle1
+        IMU85_dict['pitch_angle'] = pitch_angle1
+        IMU85_dict['pitch_rate'] = pitch_rate1
+        IMU85_dict['yaw_rate'] = yaw_rate1
+        
+        IMU55_dict['yaw_angle'] = yaw_angle2
+        IMU55_dict['pitch_angle'] = pitch_angle2
+        IMU55_dict['pitch_rate'] = pitch_rate2
+        IMU55_dict['yaw_rate'] = yaw_rate2
+        
+        
+        
+    
+    
+

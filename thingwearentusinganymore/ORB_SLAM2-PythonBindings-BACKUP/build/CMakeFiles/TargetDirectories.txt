@@ -1,7 +1,0 @@
-/home/bracketbot/Desktop/BracketBot/ORB_SLAM2-PythonBindings/build/CMakeFiles/install/strip.dir
-/home/bracketbot/Desktop/BracketBot/ORB_SLAM2-PythonBindings/build/CMakeFiles/edit_cache.dir
-/home/bracketbot/Desktop/BracketBot/ORB_SLAM2-PythonBindings/build/CMakeFiles/orbslam2.dir
-/home/bracketbot/Desktop/BracketBot/ORB_SLAM2-PythonBindings/build/CMakeFiles/rebuild_cache.dir
-/home/bracketbot/Desktop/BracketBot/ORB_SLAM2-PythonBindings/build/CMakeFiles/list_install_components.dir
-/home/bracketbot/Desktop/BracketBot/ORB_SLAM2-PythonBindings/build/CMakeFiles/install/local.dir
-/home/bracketbot/Desktop/BracketBot/ORB_SLAM2-PythonBindings/build/CMakeFiles/install.dir

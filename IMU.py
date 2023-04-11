@@ -21,7 +21,7 @@ from Adafruit_CircuitPython_BNO08x.adafruit_bno08x.i2c import BNO08X_I2C
 maxI2CBusses = 2
 
 class IMU_BNO085:
-    setup = 1
+    setup = 0
 
     # initialize the IMU by opening the I2C connection and zeroing yaw
     def __init__(self):
@@ -139,7 +139,7 @@ class IMU_BNO085:
         if(not self.setup):
             print("ERROR IMU has not been initialized")
             return None
-        adjust = -math.radians(1.6)#adjust for -90
+        adjust = -math.radians(1.65)
 
         return self.getGravityVector()[1] - adjust
 
