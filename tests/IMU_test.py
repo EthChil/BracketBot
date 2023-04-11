@@ -30,7 +30,7 @@ yawAngles2 = []
 yawRates2 = []
 
 stamp = time.time()
-while (time.time() - stamp < 20):
+while (time.time() - stamp < 100):
     time.sleep(0.05)
 
     #bno085

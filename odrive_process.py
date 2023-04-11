@@ -49,7 +49,7 @@ def run_odrive(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, 
     Xf = np.array([0, 0, 0, 0, 0, 0])
     #Q = diag([100 1 10 1 10 1]); % 'x', 'v', 'θ', 'ω', 'δ', "δ'
     #R = diag([3 3]); % Torque cost Cθ,Cδ
-    K = np.array([[-5.77, -7.74, -42.86, -16.89, 0.00, 0.00],[-0.00, -0.00, -0.00, -0.00, 1.83, 1.77]] )
+    K = np.array([[-5.77, -8.18, -48.46, -20.72, -0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 0.58, 1.10]])
     
     start_time = time.time()
     cur_time = time.time() - start_time
@@ -105,21 +105,23 @@ def run_odrive(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, 
             print("velocity too high: ", v_lqr ,"m/s")
             termination_event.set()
         
-        vel_scope = 0.1
-        mult_a0 = (vel_scope - abs(axis0.get_vel()))/vel_scope if abs(axis0.get_vel())<0.1 else 0
-        mult_a1 = (vel_scope - abs(axis1.get_vel()))/vel_scope if abs(axis1.get_vel())<0.1 else 0
+        a0vel = abs(axis0.get_vel())
+        a1vel = abs(axis1.get_vel())
         
-        print(mult_a0, mult_a1)
-        # instead of anticogging
+        vel_scope = 0.05
+        
+        mult_a0 = max((vel_scope - a0vel)/vel_scope, 1) if a0vel<vel_scope else 0
+        mult_a1 = max((vel_scope - a1vel)/vel_scope, 1) if a1vel<vel_scope else 0
+        
         if Cl > 0:
-            axis0.set_trq(Cl+0.26*mult_a0)
+            axis0.set_trq(Cl+0.26)
         else:
-            axis0.set_trq(Cl-0.25*mult_a0)
+            axis0.set_trq(Cl-0.25)
             
         if Cr > 0:
-            axis1.set_trq(Cr+0.28*mult_a1)
+            axis1.set_trq(Cr+0.28)
         else:
-            axis1.set_trq(Cr-0.23*mult_a1)
+            axis1.set_trq(Cr-0.23)
             
     def LQR_keyboard(Xf, K):
         nonlocal x_stable
@@ -141,31 +143,32 @@ def run_odrive(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, 
         if mode.get("key", "NOPE") == "NONE":
             print("back to 0")
             Xf = np.array([x_stable, 0, 0, 0, theta_stable, 0])
-            K = np.array([[-5.77, -8.02, -44.82, -17.54, 0.00, 0.00],[-0.00, -0.00, -0.00, -0.00, 1.83, 1.77]] )
+            K = np.array([[-3.16, -5.13, -36.52, -15.48, 0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 1.83, 1.77]] )
+            
             
         elif mode.get("key", "NOPE") == "W":
             x_stable = x_lqr
             theta_stable = yaw_angle2
             Xf = np.array([x_lqr, 0.2, 0, 0, yaw_angle2, 0])
-            K = np.array([[-0.58, -1.63, -20.61, -7.77, -0.00, 0.00],[0.00, -0.00, -0.00, -0.00, 0.06, 3.18]] )
+            K = np.array([[-0.06, -3.23, -33.26, -14.00, 0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 0.58, 1.10]] )
             
         elif mode.get("key", "NOPE") == "S":
             x_stable = x_lqr
             theta_stable = yaw_angle2
             Xf = np.array([x_lqr, -0.2, 0, 0, yaw_angle2, 0])
-            K = np.array([[-0.58, -1.63, -20.61, -7.77, -0.00, 0.00],[0.00, -0.00, -0.00, -0.00, 0.06, 3.18]]  )
+            K = np.array([[-0.06, -3.23, -33.26, -14.00, 0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 0.58, 1.10]] )
             
         elif mode.get("key", "NOPE") == "A":
             x_stable = x_lqr
             theta_stable = yaw_angle2
             Xf = np.array([x_lqr, 0, 0, 0, yaw_angle2, -0.5])
-            K = np.array([[-0.71, -1.90, -21.98, -8.30, 0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 0.07, 3.89]] )
+            K = np.array([[-1.83, -3.47, -29.92, -12.53, 0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 0.06, 3.18]])
             
         elif mode.get("key", "NOPE") == "D":
             x_stable = x_lqr
             theta_stable = yaw_angle2
             Xf = np.array([x_lqr, 0, 0, 0, yaw_angle2, 0.5])
-            K = np.array([[-0.71, -1.90, -21.98, -8.30, 0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 0.07, 3.89]] )
+            K = np.array([[-1.83, -3.47, -29.92, -12.53, 0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 0.06, 3.18]])
             
 
         pitch_angle1 = imu85_dict.get("pitch_angle", 0)
@@ -189,14 +192,14 @@ def run_odrive(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, 
         # print(mult_a0, mult_a1, a0vel, a1vel)
         # instead of anticogging
         if Cl > 0:
-            axis0.set_trq(Cl+0.26*mult_a0)
+            axis0.set_trq(Cl+0.26/2)
         else:
-            axis0.set_trq(Cl-0.25*mult_a0)
+            axis0.set_trq(Cl-0.25/2)
             
         if Cr > 0:
-            axis1.set_trq(Cr+0.28*mult_a1)
+            axis1.set_trq(Cr+0.28/2)
         else:
-            axis1.set_trq(Cr-0.23*mult_a1)
+            axis1.set_trq(Cr-0.23/2)
         
         
         

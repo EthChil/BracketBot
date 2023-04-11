@@ -139,7 +139,7 @@ class IMU_BNO085:
         if(not self.setup):
             print("ERROR IMU has not been initialized")
             return None
-        adjust = -math.radians(1.65)
+        adjust = math.radians(0.15)
 
         return self.getGravityVector()[1] - adjust
 

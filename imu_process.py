@@ -14,7 +14,7 @@ def start_imu(IMU85_dict, IMU55_dict, imu_setup_done, termination_event):
     imu_setup_done.set() 
     
     while not termination_event.is_set():
-        time.sleep(0.01)
+        # time.sleep(0.0001)
         yaw_angle1 = -IMU1.getYawAngle()
         pitch_angle1 = -IMU1.getPitchAngle()
         pitch_rate1 = IMU1.getPitchRate()
