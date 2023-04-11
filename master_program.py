@@ -22,23 +22,26 @@ def prompt_drive_mode():
 def sigint_handler(signal, frame):
     print("Ctrl+C pressed, setting termination event")
     termination_event.set()
-
-
+                
 def keyboard_input(drive_mode, termination_event):
-    default_value = "NONE" 
+    default_value = "NONE"
     drive_mode["key"] = default_value
+    keys = ['w', 'a', 's', 'd']
 
     while not termination_event.is_set():
         time.sleep(0.05)
-        event = keyboard.read_event()
-        event_name_upper = event.name.upper()
-        print(event_name_upper)
 
-        if event_name_upper in ['W', 'A', 'S', 'D']:
-            if event.event_type == keyboard.KEY_DOWN:  # If a key is pressed
-                drive_mode["key"] = event_name_upper
-            elif event.event_type == keyboard.KEY_UP:  # If a key is released
-                drive_mode["key"] = default_value
+        pressed_key = default_value
+        for key in keys:
+            if keyboard.is_pressed(key):
+                pressed_key = key.upper()
+                break
+
+        drive_mode["key"] = pressed_key
+                
+                
+                
+        
             
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, sigint_handler)
@@ -67,7 +70,6 @@ if __name__ == "__main__":
         odrive_runner_process = Process(target=run_odrive, args=(drive_mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, ego_estimation, drive_stats, termination_event))
         logger_runner_process = Process(target=logger, args=(drive_mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, ego_estimation, drive_stats, termination_event))
         keyboard_input_process = Process(target=keyboard_input, args=(drive_mode, termination_event))
-
 
         imu_runner_process.start()
         odrive_runner_process.start()

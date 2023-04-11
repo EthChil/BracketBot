@@ -56,7 +56,7 @@ def run_odrive(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, 
     prev_time = time.time() - start_time
     
     #keyboard control
-    s_stable = x_lqr
+    x_stable = x_lqr
     theta_stable = yaw_angle2
     
     
@@ -121,12 +121,25 @@ def run_odrive(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, 
         else:
             axis1.set_trq(Cr-0.23*mult_a1)
             
-    def LQR_keyboard(Xf, K, x_stable, theta_stable):
+    def LQR_keyboard(Xf, K):
+        nonlocal x_stable
+        nonlocal theta_stable
+        
         x_lqr = (axis0.get_pos_turns() * t2m  + axis1.get_pos_turns() * t2m)/2 - pos_init
         v_lqr = (axis0.get_vel() * t2m + axis1.get_vel() * t2m)/2
         yaw_angle2 = imu55_dict.get("yaw_angle", 0)
         
+        #stop the program if the torque or vel gets super high
+        if abs(axis0.get_torque_input()) > 10:
+            print("torque too high: ",axis0.get_torque_input(),"Nm")
+            termination_event.set()
+        if abs(v_lqr) > 3:
+            print("velocity too high: ", v_lqr ,"m/s")
+            termination_event.set()
+            
+        
         if mode.get("key", "NOPE") == "NONE":
+            print("back to 0")
             Xf = np.array([x_stable, 0, 0, 0, theta_stable, 0])
             K = np.array([[-5.77, -8.02, -44.82, -17.54, 0.00, 0.00],[-0.00, -0.00, -0.00, -0.00, 1.83, 1.77]] )
             
@@ -134,25 +147,25 @@ def run_odrive(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, 
             x_stable = x_lqr
             theta_stable = yaw_angle2
             Xf = np.array([x_lqr, 0.2, 0, 0, yaw_angle2, 0])
-            K = np.array([[-0.50, -5.49, -42.56, -16.66, -0.00, -0.00],[0.00, 0.00, 0.00, 0.00, 1.58, 1.63]] )
+            K = np.array([[-0.58, -1.63, -20.61, -7.77, -0.00, 0.00],[0.00, -0.00, -0.00, -0.00, 0.06, 3.18]] )
             
         elif mode.get("key", "NOPE") == "S":
             x_stable = x_lqr
             theta_stable = yaw_angle2
             Xf = np.array([x_lqr, -0.2, 0, 0, yaw_angle2, 0])
-            K = np.array([[-0.50, -5.49, -42.56, -16.66, -0.00, -0.00],[0.00, 0.00, 0.00, 0.00, 1.58, 1.63]]  )
+            K = np.array([[-0.58, -1.63, -20.61, -7.77, -0.00, 0.00],[0.00, -0.00, -0.00, -0.00, 0.06, 3.18]]  )
             
         elif mode.get("key", "NOPE") == "A":
             x_stable = x_lqr
             theta_stable = yaw_angle2
-            Xf = np.array([x_lqr, 0, 0, 0, yaw_angle2, -0.1])
-            K = np.array([[-5.00, -7.12, -41.42, -16.19, 0.00, -0.00],[-0.00, -0.00, -0.00, -0.00, 0.50, 5.08]])
+            Xf = np.array([x_lqr, 0, 0, 0, yaw_angle2, -0.5])
+            K = np.array([[-0.71, -1.90, -21.98, -8.30, 0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 0.07, 3.89]] )
             
         elif mode.get("key", "NOPE") == "D":
             x_stable = x_lqr
             theta_stable = yaw_angle2
-            Xf = np.array([x_lqr, 0, 0, 0, yaw_angle2, 0.1])
-            K = np.array([[-5.00, -7.12, -41.42, -16.19, 0.00, -0.00],[-0.00, -0.00, -0.00, -0.00, 0.50, 5.08]] )
+            Xf = np.array([x_lqr, 0, 0, 0, yaw_angle2, 0.5])
+            K = np.array([[-0.71, -1.90, -21.98, -8.30, 0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 0.07, 3.89]] )
             
 
         pitch_angle1 = imu85_dict.get("pitch_angle", 0)
@@ -173,7 +186,7 @@ def run_odrive(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, 
         mult_a0 = max((vel_scope - a0vel)/vel_scope, 1) if a0vel<vel_scope else 0
         mult_a1 = max((vel_scope - a1vel)/vel_scope, 1) if a1vel<vel_scope else 0
 
-        print(mult_a0, mult_a1, a0vel, a1vel)
+        # print(mult_a0, mult_a1, a0vel, a1vel)
         # instead of anticogging
         if Cl > 0:
             axis0.set_trq(Cl+0.26*mult_a0)
@@ -189,7 +202,7 @@ def run_odrive(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, 
         
     while not termination_event.is_set():
         # RUN EGO ESTIMATION
-        time.sleep(0.001)
+        time.sleep(0.0001)
         pos_a0_cur = axis0.get_pos_turns() * t2m - pos_init_a0
         pos_a1_cur = axis1.get_pos_turns() * t2m - pos_init_a1
         pos_a0_delta = pos_a0_cur-pos_a0_prev
@@ -204,7 +217,7 @@ def run_odrive(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, 
             LQR()
             
         if mode.get("mode", "IDLE") == "KEYBOARD":
-            LQR_keyboard(Xf, K, x_lqr, yaw_angle2)
+            LQR_keyboard(Xf, K)
             
         else:
             brake_both_motors()
