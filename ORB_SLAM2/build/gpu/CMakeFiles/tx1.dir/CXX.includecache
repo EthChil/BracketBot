@@ -574,7 +574,7 @@ cuda_runtime.h
 cuda/Cuda.hpp
 -
 
-/home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/gpu/tx1.cpp
+/home/bracketbot/Desktop/BracketBot/ORB_SLAM2/gpu/tx1.cpp
 iostream
 -
 algorithm

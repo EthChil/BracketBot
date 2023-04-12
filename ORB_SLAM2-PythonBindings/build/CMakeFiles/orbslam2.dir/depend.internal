@@ -142,18 +142,6 @@ CMakeFiles/orbslam2.dir/src/ORBSlamPython.cpp.o
  /usr/include/python3.8/unicodeobject.h
  /usr/include/python3.8/warnings.h
  /usr/include/python3.8/weakrefobject.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/__multiarray_api.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/_neighborhood_iterator_imp.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/_numpyconfig.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/ndarrayobject.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/ndarraytypes.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/npy_1_7_deprecated_api.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/npy_common.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/npy_cpu.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/npy_endian.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/numpyconfig.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/old_defines.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/utils.h
  /usr/local/cuda/include/builtin_types.h
  /usr/local/cuda/include/channel_descriptor.h
  /usr/local/cuda/include/crt/common_functions.h
@@ -680,6 +668,18 @@ CMakeFiles/orbslam2.dir/src/ORBSlamPython.cpp.o
  /usr/local/include/pangolin/windowing/handler_enums.h
  /usr/local/include/pangolin/windowing/window.h
  /usr/local/include/sigslot/signal.hpp
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/__multiarray_api.h
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/_neighborhood_iterator_imp.h
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/_numpyconfig.h
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/ndarrayobject.h
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/ndarraytypes.h
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/npy_1_7_deprecated_api.h
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/npy_common.h
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/npy_cpu.h
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/npy_endian.h
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/numpyconfig.h
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/old_defines.h
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/utils.h
 CMakeFiles/orbslam2.dir/src/pyboost_cv2_converter.cpp.o
  ../src/pyboostcvconverter/pyboostcvconverter.hpp
  /home/bracketbot/Desktop/BracketBot/ORB_SLAM2-PythonBindings/src/pyboost_cv2_converter.cpp
@@ -770,18 +770,6 @@ CMakeFiles/orbslam2.dir/src/pyboost_cv2_converter.cpp.o
  /usr/include/python3.8/unicodeobject.h
  /usr/include/python3.8/warnings.h
  /usr/include/python3.8/weakrefobject.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/__multiarray_api.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/_neighborhood_iterator_imp.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/_numpyconfig.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/ndarrayobject.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/ndarraytypes.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/npy_1_7_deprecated_api.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/npy_common.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/npy_cpu.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/npy_endian.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/numpyconfig.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/old_defines.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/utils.h
  /usr/local/include/opencv4/opencv2/calib3d.hpp
  /usr/local/include/opencv4/opencv2/core.hpp
  /usr/local/include/opencv4/opencv2/core/affine.hpp
@@ -917,6 +905,18 @@ CMakeFiles/orbslam2.dir/src/pyboost_cv2_converter.cpp.o
  /usr/local/include/opencv4/opencv2/viz/viz3d.hpp
  /usr/local/include/opencv4/opencv2/viz/vizcore.hpp
  /usr/local/include/opencv4/opencv2/viz/widgets.hpp
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/__multiarray_api.h
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/_neighborhood_iterator_imp.h
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/_numpyconfig.h
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/ndarrayobject.h
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/ndarraytypes.h
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/npy_1_7_deprecated_api.h
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/npy_common.h
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/npy_cpu.h
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/npy_endian.h
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/numpyconfig.h
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/old_defines.h
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/utils.h
 CMakeFiles/orbslam2.dir/src/pyboost_cv3_converter.cpp.o
  ../src/pyboostcvconverter/pyboostcvconverter.hpp
  /home/bracketbot/Desktop/BracketBot/ORB_SLAM2-PythonBindings/src/pyboost_cv3_converter.cpp
@@ -1007,18 +1007,6 @@ CMakeFiles/orbslam2.dir/src/pyboost_cv3_converter.cpp.o
  /usr/include/python3.8/unicodeobject.h
  /usr/include/python3.8/warnings.h
  /usr/include/python3.8/weakrefobject.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/__multiarray_api.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/_neighborhood_iterator_imp.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/_numpyconfig.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/ndarrayobject.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/ndarraytypes.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/npy_1_7_deprecated_api.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/npy_common.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/npy_cpu.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/npy_endian.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/numpyconfig.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/old_defines.h
- /usr/lib/python2.7/dist-packages/numpy/core/include/numpy/utils.h
  /usr/local/include/opencv4/opencv2/calib3d.hpp
  /usr/local/include/opencv4/opencv2/core.hpp
  /usr/local/include/opencv4/opencv2/core/affine.hpp
@@ -1154,3 +1142,15 @@ CMakeFiles/orbslam2.dir/src/pyboost_cv3_converter.cpp.o
  /usr/local/include/opencv4/opencv2/viz/viz3d.hpp
  /usr/local/include/opencv4/opencv2/viz/vizcore.hpp
  /usr/local/include/opencv4/opencv2/viz/widgets.hpp
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/__multiarray_api.h
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/_neighborhood_iterator_imp.h
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/_numpyconfig.h
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/ndarrayobject.h
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/ndarraytypes.h
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/npy_1_7_deprecated_api.h
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/npy_common.h
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/npy_cpu.h
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/npy_endian.h
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/numpyconfig.h
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/old_defines.h
+ /usr/local/lib/python3.8/dist-packages/numpy/core/include/numpy/utils.h

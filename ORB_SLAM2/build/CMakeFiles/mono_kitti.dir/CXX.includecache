@@ -574,7 +574,7 @@ cuda_runtime.h
 cuda/Cuda.hpp
 -
 
-/home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/Examples/Monocular/mono_kitti.cc
+/home/bracketbot/Desktop/BracketBot/ORB_SLAM2/Examples/Monocular/mono_kitti.cc
 unistd.h
 -
 iostream
@@ -590,7 +590,7 @@ iomanip
 opencv2/core/core.hpp
 -
 System.h
-/home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/Examples/Monocular/System.h
+/home/bracketbot/Desktop/BracketBot/ORB_SLAM2/Examples/Monocular/System.h
 Utils.hpp
 -
 

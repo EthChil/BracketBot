@@ -48,10 +48,10 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable
+CMAKE_SOURCE_DIR = /home/bracketbot/Desktop/BracketBot/ORB_SLAM2
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/build
+CMAKE_BINARY_DIR = /home/bracketbot/Desktop/BracketBot/ORB_SLAM2/build
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -126,14 +126,14 @@ install/fast: preinstall/fast
 
 # The main all target
 all: cmake_check_build_system
-	cd /home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/build && $(CMAKE_COMMAND) -E cmake_progress_start /home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/build/CMakeFiles /home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/build/gpu/CMakeFiles/progress.marks
-	cd /home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/build && $(MAKE) -f CMakeFiles/Makefile2 gpu/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/build/CMakeFiles 0
+	cd /home/bracketbot/Desktop/BracketBot/ORB_SLAM2/build && $(CMAKE_COMMAND) -E cmake_progress_start /home/bracketbot/Desktop/BracketBot/ORB_SLAM2/build/CMakeFiles /home/bracketbot/Desktop/BracketBot/ORB_SLAM2/build/gpu/CMakeFiles/progress.marks
+	cd /home/bracketbot/Desktop/BracketBot/ORB_SLAM2/build && $(MAKE) -f CMakeFiles/Makefile2 gpu/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/bracketbot/Desktop/BracketBot/ORB_SLAM2/build/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
 clean:
-	cd /home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/build && $(MAKE) -f CMakeFiles/Makefile2 gpu/clean
+	cd /home/bracketbot/Desktop/BracketBot/ORB_SLAM2/build && $(MAKE) -f CMakeFiles/Makefile2 gpu/clean
 .PHONY : clean
 
 # The main clean target
@@ -143,22 +143,22 @@ clean/fast: clean
 
 # Prepare targets for installation.
 preinstall: all
-	cd /home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/build && $(MAKE) -f CMakeFiles/Makefile2 gpu/preinstall
+	cd /home/bracketbot/Desktop/BracketBot/ORB_SLAM2/build && $(MAKE) -f CMakeFiles/Makefile2 gpu/preinstall
 .PHONY : preinstall
 
 # Prepare targets for installation.
 preinstall/fast:
-	cd /home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/build && $(MAKE) -f CMakeFiles/Makefile2 gpu/preinstall
+	cd /home/bracketbot/Desktop/BracketBot/ORB_SLAM2/build && $(MAKE) -f CMakeFiles/Makefile2 gpu/preinstall
 .PHONY : preinstall/fast
 
 # clear depends
 depend:
-	cd /home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/build && $(CMAKE_COMMAND) -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
+	cd /home/bracketbot/Desktop/BracketBot/ORB_SLAM2/build && $(CMAKE_COMMAND) -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
 .PHONY : depend
 
 # Convenience name for target.
 gpu/CMakeFiles/tx1.dir/rule:
-	cd /home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/build && $(MAKE) -f CMakeFiles/Makefile2 gpu/CMakeFiles/tx1.dir/rule
+	cd /home/bracketbot/Desktop/BracketBot/ORB_SLAM2/build && $(MAKE) -f CMakeFiles/Makefile2 gpu/CMakeFiles/tx1.dir/rule
 .PHONY : gpu/CMakeFiles/tx1.dir/rule
 
 # Convenience name for target.
@@ -168,7 +168,7 @@ tx1: gpu/CMakeFiles/tx1.dir/rule
 
 # fast build rule for target.
 tx1/fast:
-	cd /home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/build && $(MAKE) -f gpu/CMakeFiles/tx1.dir/build.make gpu/CMakeFiles/tx1.dir/build
+	cd /home/bracketbot/Desktop/BracketBot/ORB_SLAM2/build && $(MAKE) -f gpu/CMakeFiles/tx1.dir/build.make gpu/CMakeFiles/tx1.dir/build
 .PHONY : tx1/fast
 
 tx1.o: tx1.cpp.o
@@ -177,7 +177,7 @@ tx1.o: tx1.cpp.o
 
 # target to build an object file
 tx1.cpp.o:
-	cd /home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/build && $(MAKE) -f gpu/CMakeFiles/tx1.dir/build.make gpu/CMakeFiles/tx1.dir/tx1.cpp.o
+	cd /home/bracketbot/Desktop/BracketBot/ORB_SLAM2/build && $(MAKE) -f gpu/CMakeFiles/tx1.dir/build.make gpu/CMakeFiles/tx1.dir/tx1.cpp.o
 .PHONY : tx1.cpp.o
 
 tx1.i: tx1.cpp.i
@@ -186,7 +186,7 @@ tx1.i: tx1.cpp.i
 
 # target to preprocess a source file
 tx1.cpp.i:
-	cd /home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/build && $(MAKE) -f gpu/CMakeFiles/tx1.dir/build.make gpu/CMakeFiles/tx1.dir/tx1.cpp.i
+	cd /home/bracketbot/Desktop/BracketBot/ORB_SLAM2/build && $(MAKE) -f gpu/CMakeFiles/tx1.dir/build.make gpu/CMakeFiles/tx1.dir/tx1.cpp.i
 .PHONY : tx1.cpp.i
 
 tx1.s: tx1.cpp.s
@@ -195,7 +195,7 @@ tx1.s: tx1.cpp.s
 
 # target to generate assembly for a file
 tx1.cpp.s:
-	cd /home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/build && $(MAKE) -f gpu/CMakeFiles/tx1.dir/build.make gpu/CMakeFiles/tx1.dir/tx1.cpp.s
+	cd /home/bracketbot/Desktop/BracketBot/ORB_SLAM2/build && $(MAKE) -f gpu/CMakeFiles/tx1.dir/build.make gpu/CMakeFiles/tx1.dir/tx1.cpp.s
 .PHONY : tx1.cpp.s
 
 # Help Target
@@ -225,6 +225,6 @@ help:
 # No rule that depends on this can have commands that come from listfiles
 # because they might be regenerated.
 cmake_check_build_system:
-	cd /home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/build && $(CMAKE_COMMAND) -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 0
+	cd /home/bracketbot/Desktop/BracketBot/ORB_SLAM2/build && $(CMAKE_COMMAND) -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 0
 .PHONY : cmake_check_build_system
 

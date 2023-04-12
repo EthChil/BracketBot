@@ -1,4 +1,4 @@
-# Install script for directory: /home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/gpu
+# Install script for directory: /home/bracketbot/Desktop/BracketBot/ORB_SLAM2/gpu
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

@@ -1,6 +1,6 @@
 import cv2
 
-def gstreamer_pipeline(sensor_id=0, capture_width=1920, capture_height=1080, display_width=960, display_height=540, framerate=30, flip_method=0):
+def gstreamer_pipeline(sensor_id=0, capture_width=1280, capture_height=720, display_width=960, display_height=540, framerate=30, flip_method=0):
     return (
         "nvarguscamerasrc sensor-id=%d !"
         "video/x-raw(memory:NVMM), width=(int)%d, height=(int)%d, framerate=(fraction)%d/1 ! "
@@ -18,6 +18,8 @@ def gstreamer_pipeline(sensor_id=0, capture_width=1920, capture_height=1080, dis
             display_height,
         )
     )
+    
+
 
 def save_image(filename="output.jpg"):
     print(gstreamer_pipeline(flip_method=0))
@@ -26,6 +28,7 @@ def save_image(filename="output.jpg"):
         try:
             ret_val, frame = video_capture.read()
             if ret_val:
+                # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 cv2.imwrite(filename, frame)
             else:
                 print("Error: Unable to capture frame from camera")
@@ -36,4 +39,4 @@ def save_image(filename="output.jpg"):
         print("Error: Unable to open camera")
 
 if __name__ == "__main__":
-    save_image("output_10.jpg")
+    save_image("output_12.jpg")

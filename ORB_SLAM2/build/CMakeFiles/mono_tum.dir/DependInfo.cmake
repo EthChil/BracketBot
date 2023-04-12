@@ -4,7 +4,7 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
-  "/home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/Examples/Monocular/mono_tum.cc" "/home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/build/CMakeFiles/mono_tum.dir/Examples/Monocular/mono_tum.cc.o"
+  "/home/bracketbot/Desktop/BracketBot/ORB_SLAM2/Examples/Monocular/mono_tum.cc" "/home/bracketbot/Desktop/BracketBot/ORB_SLAM2/build/CMakeFiles/mono_tum.dir/Examples/Monocular/mono_tum.cc.o"
   )
 set(CMAKE_CXX_COMPILER_ID "GNU")
 
@@ -29,7 +29,7 @@ set(CMAKE_CXX_TARGET_INCLUDE_PATH
 
 # Targets to which this target links.
 set(CMAKE_TARGET_LINKED_INFO_FILES
-  "/home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/build/CMakeFiles/ORB_SLAM2.dir/DependInfo.cmake"
+  "/home/bracketbot/Desktop/BracketBot/ORB_SLAM2/build/CMakeFiles/ORB_SLAM2.dir/DependInfo.cmake"
   )
 
 # Fortran module output directory.

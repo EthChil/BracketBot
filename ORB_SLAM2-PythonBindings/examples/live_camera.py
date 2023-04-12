@@ -5,7 +5,7 @@ import orbslam2
 import time
 import cv2
 
-def gstreamer_pipeline(sensor_id=0, capture_width=1280, capture_height=720, display_width=640, display_height=360, framerate=10, flip_method=0):
+def gstreamer_pipeline(sensor_id=0, capture_width=1280, capture_height=720, display_width=640, display_height=360, framerate=30, flip_method=0):
     return (
         "nvarguscamerasrc sensor-id=%d !"
         "video/x-raw(memory:NVMM), width=(int)%d, height=(int)%d, framerate=(fraction)%d/1 ! "
@@ -30,7 +30,7 @@ def main(vocab_path, settings_path):
     start_time = time.time()
 
     slam = orbslam2.System(vocab_path, settings_path, orbslam2.Sensor.MONOCULAR)
-    slam.set_use_viewer(True)
+    slam.set_use_viewer(False)
     slam.initialize()
 
     # times_track = [0 for _ in range(num_images)]

@@ -6,7 +6,7 @@ import time
 import numpy as np
 import math
 
-def run_odrive(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, ego_estimation, drive_stats, termination_event):
+def run_odrive(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, ego_estimation, drive_stats, set_points, termination_event):
     
     # WAIT FOR PROCESSES
     imu_setup_done.wait() 
@@ -58,6 +58,7 @@ def run_odrive(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, 
     #keyboard control
     x_stable = x_lqr
     theta_stable = yaw_angle2
+    prev_dir = 0
     
     
     
@@ -123,9 +124,12 @@ def run_odrive(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, 
         else:
             axis1.set_trq(Cr-0.23)
             
-    def LQR_keyboard(Xf, K):
+    def LQR_keyboard():
         nonlocal x_stable
         nonlocal theta_stable
+        nonlocal prev_dir
+        nonlocal Xf
+        nonlocal K
         
         x_lqr = (axis0.get_pos_turns() * t2m  + axis1.get_pos_turns() * t2m)/2 - pos_init
         v_lqr = (axis0.get_vel() * t2m + axis1.get_vel() * t2m)/2
@@ -135,40 +139,45 @@ def run_odrive(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, 
         if abs(axis0.get_torque_input()) > 10:
             print("torque too high: ",axis0.get_torque_input(),"Nm")
             termination_event.set()
-        if abs(v_lqr) > 3:
+        if abs(v_lqr) > 5:
             print("velocity too high: ", v_lqr ,"m/s")
             termination_event.set()
             
         
         if mode.get("key", "NOPE") == "NONE":
             print("back to 0")
-            Xf = np.array([x_stable, 0, 0, 0, theta_stable, 0])
-            K = np.array([[-3.16, -5.13, -36.52, -15.48, 0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 1.83, 1.77]] )
+            #0.2 is to allow it to slow down
+            Xf = np.array([x_stable+0.3*prev_dir, 0, 0, 0, theta_stable, 0])
+            K = np.array([[-4.47, -8.45, -53.75, -23.05, -0.00, -0.00],[-0.00, -0.00, -0.00, -0.00, 1.29, 1.52]])
             
             
         elif mode.get("key", "NOPE") == "W":
+            prev_dir = 1
             x_stable = x_lqr
             theta_stable = yaw_angle2
-            Xf = np.array([x_lqr, 0.2, 0, 0, yaw_angle2, 0])
-            K = np.array([[-0.06, -3.23, -33.26, -14.00, 0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 0.58, 1.10]] )
+            Xf = np.array([x_lqr, 0.25, 0.015, 0, yaw_angle2, 0])
+            K = np.array([[-0.07, -5.55, -47.63, -20.37, 0.00, -0.00],[-0.00, 0.00, -0.00, -0.00, 0.71, 1.26]] )
             
         elif mode.get("key", "NOPE") == "S":
+            prev_dir = -1
             x_stable = x_lqr
             theta_stable = yaw_angle2
-            Xf = np.array([x_lqr, -0.2, 0, 0, yaw_angle2, 0])
-            K = np.array([[-0.06, -3.23, -33.26, -14.00, 0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 0.58, 1.10]] )
+            Xf = np.array([x_lqr, -0.25, -0.015, 0, yaw_angle2, 0])
+            K = np.array([[-0.07, -5.55, -47.63, -20.37, 0.00, -0.00],[-0.00, 0.00, -0.00, -0.00, 0.71, 1.26]] )
             
         elif mode.get("key", "NOPE") == "A":
+            prev_dir = 0
             x_stable = x_lqr
             theta_stable = yaw_angle2
-            Xf = np.array([x_lqr, 0, 0, 0, yaw_angle2, -0.5])
-            K = np.array([[-1.83, -3.47, -29.92, -12.53, 0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 0.06, 3.18]])
+            Xf = np.array([x_lqr, 0, 0, 0, yaw_angle2, -0.75])
+            K = np.array([[-5.00, -7.69, -47.73, -20.30, -0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 0.05, 2.75]] )
             
         elif mode.get("key", "NOPE") == "D":
+            prev_dir = 0
             x_stable = x_lqr
             theta_stable = yaw_angle2
-            Xf = np.array([x_lqr, 0, 0, 0, yaw_angle2, 0.5])
-            K = np.array([[-1.83, -3.47, -29.92, -12.53, 0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 0.06, 3.18]])
+            Xf = np.array([x_lqr, 0, 0, 0, yaw_angle2, 0.75])
+            K = np.array([[-5.00, -7.69, -47.73, -20.30, -0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 0.05, 2.75]] )
             
 
         pitch_angle1 = imu85_dict.get("pitch_angle", 0)
@@ -179,31 +188,41 @@ def run_odrive(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, 
         D = np.array([[0.5, 0.5],[0.5, -0.5]])
         Cl, Cr = D @ (-K @ (X - Xf))
         
-        drive_stats["stats"] = (x_lqr, v_lqr, Cl, Cr)
         
         a0vel = abs(axis0.get_vel())
         a1vel = abs(axis1.get_vel())
         
-        vel_scope = 0.05
+        vel_scope = 0.02
         
         mult_a0 = max((vel_scope - a0vel)/vel_scope, 1) if a0vel<vel_scope else 0
         mult_a1 = max((vel_scope - a1vel)/vel_scope, 1) if a1vel<vel_scope else 0
+        
+        Cl_modded = Cl
+        Cr_modded = Cr
 
-        # print(mult_a0, mult_a1, a0vel, a1vel)
-        # instead of anticogging
         if Cl > 0:
-            axis0.set_trq(Cl+0.26/2)
+            Cl_modded = Cl + 0.2*mult_a0
+            
         else:
-            axis0.set_trq(Cl-0.25/2)
+            Cl_modded = Cl - 0.2*mult_a0
             
         if Cr > 0:
-            axis1.set_trq(Cr+0.28/2)
+            Cr_modded = Cr + 0.2*mult_a1
         else:
-            axis1.set_trq(Cr-0.23/2)
+            Cr_modded = Cr - 0.2*mult_a1
+            
+        axis0.set_trq(Cl)
+        axis1.set_trq(Cr)
+        
+        
+        drive_stats["stats"] = (x_lqr, v_lqr, Cl, Cr, Cl_modded, Cr_modded)
+        
+        
         
         
         
     while not termination_event.is_set():
+        
         # RUN EGO ESTIMATION
         time.sleep(0.0001)
         pos_a0_cur = axis0.get_pos_turns() * t2m - pos_init_a0
@@ -212,6 +231,7 @@ def run_odrive(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, 
         pos_a1_delta = pos_a1_cur-pos_a1_prev
         x, y, theta = update_position(x, y, theta, pos_a0_delta, pos_a1_delta, W)
         
+        set_points['setpoints'] = Xf
         ego_estimation["ego"] = (x, y, theta)
         
         # print(mode.get("key", "NOPE"))
@@ -220,7 +240,7 @@ def run_odrive(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, 
             LQR()
             
         if mode.get("mode", "IDLE") == "KEYBOARD":
-            LQR_keyboard(Xf, K)
+            LQR_keyboard()
             
         else:
             brake_both_motors()

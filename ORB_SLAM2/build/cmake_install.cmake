@@ -1,4 +1,4 @@
-# Install script for directory: /home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable
+# Install script for directory: /home/bracketbot/Desktop/BracketBot/ORB_SLAM2
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -44,12 +44,12 @@ if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xlibraryx" OR NOT CMAKE_INSTALL_COMP
          FILE "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/libORB_SLAM2.so"
          RPATH "")
   endif()
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" TYPE SHARED_LIBRARY FILES "/home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/lib/libORB_SLAM2.so")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" TYPE SHARED_LIBRARY FILES "/home/bracketbot/Desktop/BracketBot/ORB_SLAM2/lib/libORB_SLAM2.so")
   if(EXISTS "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/libORB_SLAM2.so" AND
      NOT IS_SYMLINK "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/libORB_SLAM2.so")
     file(RPATH_CHANGE
          FILE "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/libORB_SLAM2.so"
-         OLD_RPATH "/usr/local/cuda/lib64:/home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/Thirdparty/DBoW2/lib:/home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/Thirdparty/g2o/lib:/usr/local/lib:"
+         OLD_RPATH "/usr/local/cuda/lib64:/home/bracketbot/Desktop/BracketBot/ORB_SLAM2/Thirdparty/DBoW2/lib:/home/bracketbot/Desktop/BracketBot/ORB_SLAM2/Thirdparty/g2o/lib:/usr/local/lib:"
          NEW_RPATH "")
     if(CMAKE_INSTALL_DO_STRIP)
       execute_process(COMMAND "/usr/bin/strip" "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/libORB_SLAM2.so")
@@ -59,22 +59,22 @@ endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xlibraryx" OR NOT CMAKE_INSTALL_COMPONENT)
   file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" TYPE FILE FILES
-    "/home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/Thirdparty/DBoW2/lib/libDBoW2.so"
-    "/home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/Thirdparty/g2o/lib/libg2o.so"
+    "/home/bracketbot/Desktop/BracketBot/ORB_SLAM2/Thirdparty/DBoW2/lib/libDBoW2.so"
+    "/home/bracketbot/Desktop/BracketBot/ORB_SLAM2/Thirdparty/g2o/lib/libg2o.so"
     )
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xlibraryx" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/include/ORB_SLAM2" TYPE DIRECTORY FILES "/home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/include/" FILES_MATCHING REGEX "/[^/]*\\.h$" REGEX "/Thirdparty$" EXCLUDE)
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/include/ORB_SLAM2" TYPE DIRECTORY FILES "/home/bracketbot/Desktop/BracketBot/ORB_SLAM2/include/" FILES_MATCHING REGEX "/[^/]*\\.h$" REGEX "/Thirdparty$" EXCLUDE)
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xlibraryx" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/include/ORB_SLAM2/Thirdparty" TYPE DIRECTORY FILES "/home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/Thirdparty/" FILES_MATCHING REGEX ".*\\.h(pp)?")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/include/ORB_SLAM2/Thirdparty" TYPE DIRECTORY FILES "/home/bracketbot/Desktop/BracketBot/ORB_SLAM2/Thirdparty/" FILES_MATCHING REGEX ".*\\.h(pp)?")
 endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
-  include("/home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/build/gpu/cmake_install.cmake")
+  include("/home/bracketbot/Desktop/BracketBot/ORB_SLAM2/build/gpu/cmake_install.cmake")
 
 endif()
 
@@ -86,5 +86,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/build/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/home/bracketbot/Desktop/BracketBot/ORB_SLAM2/build/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

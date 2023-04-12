@@ -48,7 +48,7 @@ set(BOOST_ROOT "/usr/lib/aarch64-linux-gnu")
 find_package(CUDA  REQUIRED)
 include_directories("${CUDA_INCLUDE_DIRS}")
 
-
+find_package(PythonInterp 3.8 REQUIRED)
 find_package(PythonLibs 3.8 REQUIRED)
 find_package(NumPy)
 # find_package(Boost 1.71.0 REQUIRED COMPONENTS python38)

@@ -51,7 +51,7 @@ CMakeFiles/stereo_kitti.dir/Examples/Stereo/stereo_kitti.cc.o
  ../include/cuda/Cuda.hpp
  ../include/cuda/Fast.hpp
  ../include/cuda/Orb.hpp
- /home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/Examples/Stereo/stereo_kitti.cc
+ /home/bracketbot/Desktop/BracketBot/ORB_SLAM2/Examples/Stereo/stereo_kitti.cc
  /usr/local/cuda/include/builtin_types.h
  /usr/local/cuda/include/channel_descriptor.h
  /usr/local/cuda/include/crt/common_functions.h

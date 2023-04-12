@@ -25,7 +25,7 @@ set(CMAKE_CXX_TARGET_INCLUDE_PATH
   "../src"
   "/home/bracketbot/Desktop/BracketBot/ORB_SLAM2/include"
   "/usr/include/python3.8"
-  "/usr/lib/python2.7/dist-packages/numpy/core/include"
+  "/usr/local/lib/python3.8/dist-packages/numpy/core/include"
   "/usr/local/include/opencv4"
   "/usr/local/include"
   "/usr/local/include/eigen3"

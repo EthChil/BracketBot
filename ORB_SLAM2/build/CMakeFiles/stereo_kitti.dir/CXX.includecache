@@ -566,7 +566,7 @@ cuda_runtime.h
 cuda/Cuda.hpp
 -
 
-/home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/Examples/Stereo/stereo_kitti.cc
+/home/bracketbot/Desktop/BracketBot/ORB_SLAM2/Examples/Stereo/stereo_kitti.cc
 unistd.h
 -
 iostream

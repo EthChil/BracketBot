@@ -52,7 +52,7 @@ gpu/CMakeFiles/tx1.dir/tx1.cpp.o
  ../include/cuda/Cuda.hpp
  ../include/cuda/Fast.hpp
  ../include/cuda/Orb.hpp
- /home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/gpu/tx1.cpp
+ /home/bracketbot/Desktop/BracketBot/ORB_SLAM2/gpu/tx1.cpp
  /usr/local/cuda/include/builtin_types.h
  /usr/local/cuda/include/channel_descriptor.h
  /usr/local/cuda/include/crt/common_functions.h

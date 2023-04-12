@@ -56,6 +56,7 @@ if __name__ == "__main__":
         # position_list = manager.list([None])
         ego_estimation = manager.dict()
         drive_stats = manager.dict()
+        set_points = manager.dict()
         
         imu55_dict = manager.dict()
         imu85_dict = manager.dict()
@@ -67,8 +68,8 @@ if __name__ == "__main__":
         odrive_setup_process.join()
         
         imu_runner_process = Process(target=start_imu, args=(imu85_dict, imu55_dict, imu_setup_done, termination_event))
-        odrive_runner_process = Process(target=run_odrive, args=(drive_mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, ego_estimation, drive_stats, termination_event))
-        logger_runner_process = Process(target=logger, args=(drive_mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, ego_estimation, drive_stats, termination_event))
+        odrive_runner_process = Process(target=run_odrive, args=(drive_mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, ego_estimation, drive_stats, set_points, termination_event))
+        logger_runner_process = Process(target=logger, args=(drive_mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, ego_estimation, drive_stats, set_points, termination_event))
         keyboard_input_process = Process(target=keyboard_input, args=(drive_mode, termination_event))
 
         imu_runner_process.start()

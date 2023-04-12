@@ -566,7 +566,7 @@ cuda_runtime.h
 cuda/Cuda.hpp
 -
 
-/home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/Examples/RGB-D/rgbd_tum.cc
+/home/bracketbot/Desktop/BracketBot/ORB_SLAM2/Examples/RGB-D/rgbd_tum.cc
 unistd.h
 -
 iostream

@@ -6,5 +6,5 @@ CXX_FLAGS = -Wall -Wextra -DUSE_NVTX -std=c++11 -O3   -std=gnu++14
 
 CXX_DEFINES = -DCOMPILEDWITHC11 -DHAVE_EIGEN -DHAVE_GLEW -DPANGO_DEFAULT_WIN_URI=\"wayland\" -D_LINUX_
 
-CXX_INCLUDES = -I/home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable -I/home/bracketbot/Desktop/BracketBot/ORBSLAM2-pushable/include -isystem /usr/local/include/eigen3 -I/usr/local/cuda/include -isystem /usr/local/include/opencv4 -isystem /usr/local/include 
+CXX_INCLUDES = -I/home/bracketbot/Desktop/BracketBot/ORB_SLAM2 -I/home/bracketbot/Desktop/BracketBot/ORB_SLAM2/include -isystem /usr/local/include/eigen3 -I/usr/local/cuda/include -isystem /usr/local/include/opencv4 -isystem /usr/local/include 
 
