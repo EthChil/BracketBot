@@ -11,6 +11,8 @@ import control
 import matplotlib.pyplot as plt
 from multiprocessing import Process, Manager, Event
 
+from imu_process import start_imu
+
 import IMU
 
 
@@ -19,35 +21,34 @@ def LQR(K, devices, pos_init):
     W = 0.567   # Distance between wheels in meters
 
     IMU1, IMU2, axis0, axis1 = devices
-    
-    t_total1 = time.time()
 
     t_imu1 = time.time()
-    t_imuread1 = time.time()
+    # yaw_angle1 = -IMU1.getYawAngle()
+    # pitch_angle1 = -IMU1.getPitchAngle()
+    # pitch_rate1 = IMU1.getPitchRate()
+    # yaw_rate1 = -IMU1.getYawRate()
     
-    pitch_angle1, yaw_angle1 = IMU1.getAngles()
+    # yaw_angle2 = IMU2.getYawAngle()
+    # pitch_angle2 = IMU2.getPitchAngle()
+    # pitch_rate2 = -IMU2.getPitchRate()
+    # yaw_rate2 = -IMU2.getYawRate()
     
-    t_imuread2 = time.time()
+    pitch_angle1 = imu85_dict.get("pitch_angle", 0)
+    yaw_angle1 = imu85_dict.get("yaw_angle", 0)
+    pitch_rate1 = imu85_dict.get("pitch_rate", 0)
+    yaw_rate1 = imu85_dict.get("yaw_rate", 0)
     
-    pitch_rate1, yaw_rate1 = IMU1.getRates()
-    
-    t_imuread3 = time.time()
+    pitch_angle2 = imu55_dict.get("pitch_angle", 0)
+    yaw_angle2 = imu55_dict.get("yaw_angle", 0)
+    pitch_rate2 = imu55_dict.get("pitch_rate", 0)
+    yaw_rate2 = imu55_dict.get("yaw_rate", 0)
     
     t_imu2 = time.time()
     t_imu = t_imu2 - t_imu1
     
-    t_imureaded1 = t_imuread2-t_imuread1
-    t_imureaded2 = t_imuread3-t_imuread2
-    
     #stop the program if the torque or vel gets super high
     t_odrive_read1 = time.time()
-    
-    odrive_pos = 
-    odrive_vel = axis0.get_vel()
-    
-    
-    
-    if abs(Cl_modded) > 10:
+    if abs(axis0.get_torque_input()) > 10:
         print("torque too high: ",axis0.get_torque_input(),"Nm")
         axis0.set_trq(0)
         axis1.set_trq(0)
@@ -59,14 +60,14 @@ def LQR(K, devices, pos_init):
         exit(0)
 
     Xf = np.array([0, 0, 0, 0, 0, 0])
-    X = np.array([axis0.get_pos_turns()*t2m-pos_init, axis0.get_vel()*t2m, -pitch_angle1, pitch_rate1, -yaw_angle1, -yaw_rate1])
+    X = np.array([axis0.get_pos_turns()*t2m-pos_init, axis0.get_vel()*t2m, pitch_angle1, pitch_rate2, yaw_angle2, yaw_rate2])
     D = np.array([[0.5, 0.5],[0.5, -0.5]])
     Cl, Cr = D @ (-K @ (X - Xf))
     
     a0vel = abs(axis0.get_vel_cts())
     a1vel = abs(axis1.get_vel_cts())
 
-    vel_scope = 70 #counts/s
+    vel_scope = 200 #counts/s
     mult_a0 = max((vel_scope - a0vel)/vel_scope, 1) if a0vel<vel_scope else 0
     mult_a1 = max((vel_scope - a1vel)/vel_scope, 1) if a1vel<vel_scope else 0
     
@@ -84,26 +85,20 @@ def LQR(K, devices, pos_init):
     else:
         Cr_modded = Cr - 0.2*mult_a1
         
-    # Apply the filtered torque values to the axes
-    axis0.set_trq(Cl_modded)
-    axis1.set_trq(Cr_modded)
 
     t_odrive_read2 = time.time()
     t_odrive_read = t_odrive_read2 - t_odrive_read1
     
     t_odrive_write1 = time.time()
-    # axis0.set_trq(Cl)
-    # axis1.set_trq(Cr)
+    axis0.set_trq(Cl)
+    axis1.set_trq(Cr)
     t_odrive_write2 = time.time()
     t_odrive_write = t_odrive_write2 - t_odrive_write1
     # if you want custom anticogging
     # axis0.set_trq(Cl_modded)
     # axis1.set_trq(Cr_modded)
     
-    t_total2 = time.time()
-    t_total = t_total2 - t_total1
-    
-    return X, [t_imu, t_odrive_read, t_odrive_write, t_imureaded1, t_imureaded2, t_total]
+    return X, [t_imu, t_odrive_read, t_odrive_write]
 
 
 def calculate_gains(A, B, Q, R):
@@ -226,15 +221,16 @@ def get_k(stdscr, K_dict, stop_event):
 def curses_wrapper(K_dict, stop_event):
     curses.wrapper(lambda stdscr: get_k(stdscr, K_dict, stop_event))
 
-def balance(K_dict, stop_event):
+def balance(K_dict, imu_setup_done, imu85_dict, imu55_dict, stop_event):
+    imu_setup_done.wait() 
     import sys
     sys.stdout = open(os.devnull, 'w')
     # SETUP IMU
-    IMU1 = IMU.IMU_BNO085()
-    IMU1.setupIMU()
-    IMU2 = IMU.IMU_BNO055(0, 40)
-    IMU2.restoreCalibrationConstants([0, 0, 85, 0, 1, 0, 166, 1, 77, 1, 176, 1, 1, 0, 0, 0, 0, 0, 232, 3, 178, 1]) #only for bno55
-    IMU2.setupIMU()
+    # IMU1 = IMU.IMU_BNO085()
+    # IMU1.setupIMU()
+    # IMU2 = IMU.IMU_BNO055(0, 40)
+    # IMU2.restoreCalibrationConstants([0, 0, 85, 0, 1, 0, 166, 1, 77, 1, 176, 1, 1, 0, 0, 0, 0, 0, 232, 3, 178, 1]) #only for bno55
+    # IMU2.setupIMU()
 
     # SETUP ODRIVE
     odrv0 = odrive.find_any()
@@ -244,7 +240,7 @@ def balance(K_dict, stop_event):
     axis0.setup()
     axis1.setup()
 
-    devices = [IMU1, IMU2, axis0, axis1]
+    devices = [imu85_dict, imu55_dict, axis0, axis1]
 
     t2m = 0.528
     pos_init = axis0.get_pos_turns()*t2m
@@ -265,16 +261,25 @@ if __name__ == "__main__":
     with Manager() as manager:
         K_dict = manager.dict()
 
-        K_dict['K'] = np.array([[-5.86, -10.02, -59.49, -28.65, -0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 1.69, 1.69]])
-
-        stop_event = Event()
-        # curses_thread = Process(target=get_k, args=(None, K_dict, stop_event))
-        balance_thread = Process(target=balance, args=(K_dict, stop_event))
+        # K_dict['K'] = np.array([[-2.93, -6.61, -46.64, -19.96, 0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 1.20, 1.45]])
         
-        # curses_thread.start()
+        stop_event = Event()
+        imu_setup_done = Event()
+        
+        imu55_dict = manager.dict()
+        imu85_dict = manager.dict()
+        
+        imu_runner_process = Process(target=start_imu, args=(imu85_dict, imu55_dict, imu_setup_done, stop_event))
+        curses_thread = Process(target=get_k, args=(None, K_dict, stop_event))
+        balance_thread = Process(target=balance, args=(K_dict, imu_setup_done, imu85_dict, imu55_dict, stop_event))
+        
+        
+        imu_runner_process.start()
+        curses_thread.start()
         balance_thread.start()
 
-        # curses_thread.join()
+        imu_runner_process.join()
+        curses_thread.join()
         balance_thread.join()
     
 
@@ -282,15 +287,12 @@ if __name__ == "__main__":
         dts = np.stack(K_dict['times'])
         states = np.stack(K_dict['state'])
         
-    fig, axs = plt.subplots(nrows=7, ncols=1, figsize=(8, 100))
+    fig, axs = plt.subplots(nrows=7, ncols=1, figsize=(8, 12))
 
     axs[0].set_title('dt')
     axs[0].plot(dts[:,0], label='imu time')
     axs[0].plot(dts[:,1], label='odrive read time')
     axs[0].plot(dts[:,2], label='odrive write time')
-    axs[0].plot(dts[:,3], label='imuread1')
-    axs[0].plot(dts[:,4], label='imuread2')
-    axs[0].plot(dts[:,5], label='total loop time')
     axs[0].xaxis.grid(True, linestyle='--', alpha=0.5)  # add x-axis grid
     axs[0].legend()
     

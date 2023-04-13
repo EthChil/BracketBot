@@ -84,6 +84,9 @@ class Axis:
 
     def get_pos_turns(self):
         return self.axis.encoder.pos_estimate * self.dir#turns
+    
+    def get_pos_cts(self):
+        return self.axis.encoder.pos_estimate_counts * self.dir#turns
 
     def accel_test(self):
         self.trq_set(0.5)

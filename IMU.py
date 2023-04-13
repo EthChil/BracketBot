@@ -112,6 +112,42 @@ class IMU_BNO085:
 
         return grav_vec
 
+    def getAngles(self):
+        if(not self.setup):
+            print("ERROR IMU has not been initialized")
+            return None
+        adjust = -math.radians(0.48116174673115375)
+        
+        (q_i, q_j, q_k, q_real) = self.bno.quaternion
+        (roll, pitch, yaw) = self.euler_from_quaternion(q_i, q_j, q_k, q_real)
+
+        #measured in radians this will go from -pi to +pi
+        norm = math.atan2(math.sin(yaw), math.cos(yaw)) - self.yaw_start_angle
+
+        if norm - self.prev_angle > math.pi:
+            self.wraps -= 1
+        elif self.prev_angle - norm > math.pi:
+            self.wraps += 1
+
+        self.prev_angle = norm
+        continuous_angle = norm + 2*math.pi*self.wraps
+
+        return [self.getGravityVector()[1] - adjust, continuous_angle]
+        
+        
+    def getRates(self):
+        # pull the wogma from the sensor
+        # rotate the 
+        if(not self.setup):
+            print("ERROR IMU has not been initialized UN SMART INDIVIDUAL")
+            return None
+
+        (gyro_x, gyro_y, gyro_z) = self.bno.gyro
+
+        (gyro_x, gyro_y, gyro_z) = self.bno.gyro
+
+        return [gyro_z, gyro_y] # 0 for top mount, 2 for base mount
+
     # yaw angle from quaternionn 
     def getYawAngle(self):
         if(not self.setup):
@@ -139,7 +175,7 @@ class IMU_BNO085:
         if(not self.setup):
             print("ERROR IMU has not been initialized")
             return None
-        adjust = -math.radians(0.4)
+        adjust = -math.radians(0.48116174673115375)
 
         return self.getGravityVector()[1] - adjust
 
@@ -413,7 +449,7 @@ class IMU_BNO055:
         if(not self.setup):
             print("ERROR IMU has not been initialized")
             return None
-        adjust = -math.pi/2 - 0.0279253 + math.radians(0.73)
+        adjust = -math.pi/2 - math.radians(2.5719877179292805)
 
         referenceAxis = np.array([0, 0, 1]) # 1, 0, 0 for top mounting on front/back of extrusion, 0, 0, 1 for conventional mount
 

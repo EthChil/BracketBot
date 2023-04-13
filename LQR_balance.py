@@ -16,37 +16,32 @@ IMU1 = IMU.IMU_BNO085()
 # IMU.restoreCalibrationConstants([0, 0, 85, 0, 1, 0, 166, 1, 77, 1, 176, 1, 1, 0, 0, 0, 0, 0, 232, 3, 178, 1]) only for bno55
 IMU1.setupIMU()
 
-IMU2 = IMU.IMU_BNO055(0, 40)
-IMU2.restoreCalibrationConstants([0, 0, 85, 0, 1, 0, 166, 1, 77, 1, 176, 1, 1, 0, 0, 0, 0, 0, 232, 3, 178, 1]) #only for bno55
-IMU2.setupIMU()
+# IMU2 = IMU.IMU_BNO055(0, 40)
+# IMU2.restoreCalibrationConstants([0, 0, 85, 0, 1, 0, 166, 1, 77, 1, 176, 1, 1, 0, 0, 0, 0, 0, 232, 3, 178, 1]) #only for bno55
+# IMU2.setupIMU()
 
 odrv0 = odrive.find_any()
 
+
 ref_time = time.time()
 t2m = 0.528 #turns to meters
+c2m = t2m/8192
 
 
-#with ivans fix
-#Q = diag([100 1 10 1 10 1]); % 'x', 'v', 'θ', 'ω', 'δ', "δ'
-#R = diag([3 3]); % Torque cost Cθ,Cδ
-K = np.array([[-5.77, -7.74, -42.86, -16.89, 0.00, 0.00],[-0.00, -0.00, -0.00, -0.00, 1.83, 1.77]] )
+
+#Q = diag([120 30 0.1 0.01 10 1]); % 'x', 'v', 'θ', 'ω', 'δ', "δ'
+#R = diag([3.5 3.5]); % Torque cost Cθ,Cδ
+K = np.array([[-7.56, -12.01, -67.08, -32.35, 0.00, 0.00],[-0.00, -0.00, -0.00, -0.00, 1.69, 1.69]])
 
 
-#not care about pos
-#Q = diag([1 1 10 1 10 1]); % 'x', 'v', 'θ', 'ω', 'δ', "δ'
-#R = diag([3 3]); % Torque cost Cθ,Cδ
-# K = np.array([[-0.58, -2.57, -26.38, -9.95, 0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 1.83, 1.77]] )
-
-
-# K = np.array([[-4.47, -6.70, -40.30, -15.81, -0.00, -0.00],[-0.00, -0.00, -0.00, -0.00, 3.16, 2.61]] )
 
 W = 0.567   # Distance between wheels in meters
 
 a0 = Axis(odrv0.axis0, dir=1)
 a1 = Axis(odrv0.axis1, dir=-1)
 
-# a0.setup()
-# a1.setup()
+a0.setup()
+a1.setup()
 
 pos_init_a0 = a0.get_pos_turns() * t2m
 pos_init_a1 = a1.get_pos_turns() * t2m
@@ -61,7 +56,7 @@ ys_ego = []
 thetas_ego = []
 thetas_fused = []
 
-x, y, theta = 0, 0, 0 # Initial position and heading
+x_ego, y, theta = 0, 0, 0 # Initial position and heading
 
 
 def update_position(x, y, theta, d_left, d_right, W):
@@ -82,13 +77,16 @@ def update_position(x, y, theta, d_left, d_right, W):
 def LQR(axis0, axis1):
     # read initial values to offset
     x_init = (axis0.get_pos_turns() * t2m + axis1.get_pos_turns() * t2m)/2
-    
     pos_init = (axis0.get_pos_turns() * t2m + axis1.get_pos_turns() * t2m)/2
+    
 
     pitch_angle1=IMU1.getPitchAngle() 
     yaw_angle1=IMU1.getYawAngle()
     pitch_rate1=IMU1.getPitchRate()
     yaw_rate1=IMU1.getYawRate()
+    
+    start_angle = -yaw_angle1
+    
 
     Xf = np.array([0, 0, 0, 0, 0, 0])
 
@@ -115,27 +113,33 @@ def LQR(axis0, axis1):
 
     Cl_commands = []
     Cr_commands = []
-
+    
     while cur_time < 30:
         # time.sleep(0.0001)
         
         cur_time = time.time() - start_time # relative time starts at 0
         dt = cur_time - prev_time
         
+        a0_pos_cts = axis0.get_pos_cts()
+        a1_pos_cts = axis1.get_pos_cts()
+        a0_vel_cts = axis0.get_vel_cts()
+        a1_vel_cts = axis1.get_vel_cts()
+        a0_trq_input = axis0.get_torque_input()
+        
         #stop the program if the torque or vel gets super high
-        if abs(axis0.get_torque_input()) > 12:
+        if abs(a0_trq_input) > 12:
             print("torque too high: ",axis0.get_torque_input(),"Nm")
             break
-        if abs(axis0.get_vel()) > 4:
+        if abs(a0_vel_cts*c2m) > 4:
             print("velocity too high: ",axis0.get_vel(),"turns/s")
             break
         
         
         # EGO MOTION
-        pos_a0_cur = axis0.get_pos_turns() * t2m - pos_init_a0
-        pos_a1_cur = axis1.get_pos_turns() * t2m - pos_init_a1
+        pos_a0_cur = a0_pos_cts * c2m - pos_init_a0
+        pos_a1_cur = a1_pos_cts * c2m - pos_init_a1
         
-        global pos_a0_prev, pos_a1_prev, x, y, theta
+        global pos_a0_prev, pos_a1_prev, x_ego, y, theta
         
         pos_a0_delta = pos_a0_cur-pos_a0_prev
         pos_a1_delta = pos_a1_cur-pos_a1_prev
@@ -146,25 +150,25 @@ def LQR(axis0, axis1):
         
         Xf = np.array([0, 0, 0, 0, 0, 0])
 
-        x = (axis0.get_pos_turns() * t2m  + axis1.get_pos_turns() * t2m)/2 - pos_init
-        v = (axis0.get_vel() * t2m + axis1.get_vel() * t2m)/2
+        x = (a0_pos_cts * c2m  + a1_pos_cts * c2m)/2 - pos_init
+        v = (a0_vel_cts * c2m + a1_vel_cts * c2m)/2
 
+
+
+        yaw_angle2 =0
+        pitch_angle2 = 0
+        pitch_rate2 = 0
+        yaw_rate2 =0
         
-        yaw_angle1 = -IMU1.getYawAngle() # positive for base mount
-        pitch_angle1 = -IMU1.getPitchAngle() # positive for base mount
-        pitch_rate1 = IMU1.getPitchRate() # negative for base mount
-        yaw_rate1 = -IMU1.getYawRate() # negative for base mount
-        
-        yaw_angle2 = IMU2.getYawAngle() # positive for base mount
-        pitch_angle2 = IMU2.getPitchAngle() # positive for base mount
-        pitch_rate2 = -IMU2.getPitchRate() # negative for base mount
-        yaw_rate2 = -IMU2.getYawRate() # negative for base mount
+        pitch_rate1, yaw_rate1 = IMU1.getRates()
+        pitch_angle1, yaw_angle1 = IMU1.getAngles()
         
         
         theta_fused = (theta + yaw_angle2)/2
         
-        x, y, theta = update_position(x, y, theta_fused, pos_a0_delta, pos_a1_delta, W)
-        xs_ego.append(x)
+        x_ego, y, theta = update_position(x_ego, y, theta, pos_a0_delta, pos_a1_delta, W)
+        
+        xs_ego.append(x_ego)
         ys_ego.append(y)
         thetas_ego.append(theta)
         thetas_fused.append(theta_fused)
@@ -172,7 +176,7 @@ def LQR(axis0, axis1):
         
         
 
-        X = np.array([x, v, pitch_angle1, pitch_rate2, yaw_angle2, yaw_rate2])
+        X = np.array([x, v, -pitch_angle1, pitch_rate1, -yaw_angle1-start_angle, -yaw_rate1])
 
         # U = -K @ (X - Xf)
 
@@ -185,20 +189,33 @@ def LQR(axis0, axis1):
         # print("Cl: ", Cl)
         # print("Cr: ", Cr)
         
+
+
+        vel_scope = 5 #counts/s
+        mult_a0 = max((vel_scope - abs(a0_vel_cts))/vel_scope, 1) if a0_vel_cts<vel_scope else 0
+        mult_a1 = max((vel_scope - abs(a1_vel_cts))/vel_scope, 1) if a1_vel_cts<vel_scope else 0
         
-        # instead of anticogging
+        Cl_modded = Cl
+        Cr_modded = Cr
+
         if Cl > 0:
-            axis0.set_trq(Cl+0.25)
+            Cl_modded = Cl + 0.15*mult_a0
+            
         else:
-            axis0.set_trq(Cl-0.25)
+            Cl_modded = Cl - 0.15*mult_a0
             
         if Cr > 0:
-            axis1.set_trq(Cr+0.25)
+            Cr_modded = Cr + 0.15*mult_a1
         else:
-            axis1.set_trq(Cr-0.25)
-        
-        # axis0.set_trq(Cl)
-        # axis1.set_trq(Cr_commands)
+            Cr_modded = Cr - 0.15*mult_a1
+            
+        # Apply the filtered torque values to the axes
+        axis0.set_trq(Cl_modded)
+        axis1.set_trq(Cr_modded)
+            
+
+        # axis0.set_trq(Cl_modded)
+        # axis1.set_trq(Cr_modded)
         
         
         

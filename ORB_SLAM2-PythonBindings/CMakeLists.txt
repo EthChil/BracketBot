@@ -93,5 +93,5 @@ target_link_libraries(${TARGET_MODULE_NAME} ${CUDA_LIBRARIES})
 
 # endif()
 
-install(TARGETS ${TARGET_MODULE_NAME} DESTINATION lib/python3.5/dist-packages)
+install(TARGETS ${TARGET_MODULE_NAME} DESTINATION lib/python3.8/dist-packages)
 

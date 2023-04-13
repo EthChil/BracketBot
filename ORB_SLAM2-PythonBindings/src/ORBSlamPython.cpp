@@ -62,6 +62,10 @@ BOOST_PYTHON_MODULE(orbslam2)
         .def("get_all_mappoints", &ORBSlamPython::getAllMappoints)
         .def("get_tracked_keypoints", &ORBSlamPython::getTrackedKeypoints)
         .def("set_floor_mappoints", &ORBSlamPython::setFloorMappoints)
+
+        .def("save_with_timestamps", &ORBSlamPython::saveWithTimestamps)
+        .def("save_keyframe_trajectory", &ORBSlamPython::saveKeyFrameTrajectory)
+
         .def("get_intrinsics_matrix", &ORBSlamPython::getIntrinsicsMatrix)
         .def("get_extrinsics_matrix", &ORBSlamPython::getExtrinsicsMatrix)
         .def("set_ground_plane_params", &ORBSlamPython::setGroundPlaneParams)
@@ -420,6 +424,26 @@ boost::python::list ORBSlamPython::getTrackedKeypoints() const
 
     return key_points;
 }
+
+void ORBSlamPython::saveWithTimestamps()
+{
+    if (!system)
+    {
+        return;
+    }
+    system->GetMap()->SaveWithTimestamps("tum_map_pts_and_keyframes.txt");
+}
+
+void ORBSlamPython::saveKeyFrameTrajectory()
+{
+    if (!system)
+    {
+        return;
+    }
+    system->SaveKeyFrameTrajectoryTUM("tum_key_frame_trajectory.txt");
+}
+
+
 
 void ORBSlamPython::setFloorMappoints(boost::python::list floorIndices)
 {

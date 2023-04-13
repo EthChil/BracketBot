@@ -57,10 +57,8 @@ def run_odrive(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, 
     
     #keyboard control
     x_stable = x_lqr
-    theta_stable = yaw_angle2
+    theta_stable = yaw_angle1
     prev_dir = 0
-    
-    
     
     def update_position(x, y, theta, d_left, d_right, W):
         distance_left = d_left
@@ -88,11 +86,11 @@ def run_odrive(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, 
         x_lqr = (axis0.get_pos_turns() * t2m  + axis1.get_pos_turns() * t2m)/2 - pos_init
         v_lqr = (axis0.get_vel() * t2m + axis1.get_vel() * t2m)/2
         pitch_angle1 = imu85_dict.get("pitch_angle", 0)
-        yaw_angle2 = imu55_dict.get("yaw_angle", 0)
-        pitch_rate2 = imu55_dict.get("pitch_rate", 0)
-        yaw_rate2 = imu55_dict.get("yaw_rate", 0)
+        yaw_angle1 = imu85_dict.get("yaw_angle", 0)
+        pitch_rate1 = imu85_dict.get("pitch_rate", 0)
+        yaw_rate1 = imu85_dict.get("yaw_rate", 0)
         
-        X = np.array([x_lqr, v_lqr, pitch_angle1, pitch_rate2, yaw_angle2, yaw_rate2])
+        X = np.array([x_lqr, v_lqr, pitch_angle1, pitch_rate1, yaw_angle1, yaw_rate1])
         D = np.array([[0.5, 0.5],[0.5, -0.5]])
         Cl, Cr = D @ (-K @ (X - Xf))
         
@@ -106,94 +104,10 @@ def run_odrive(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, 
             print("velocity too high: ", v_lqr ,"m/s")
             termination_event.set()
         
-        a0vel = abs(axis0.get_vel())
-        a1vel = abs(axis1.get_vel())
-        
-        vel_scope = 0.05
-        
-        mult_a0 = max((vel_scope - a0vel)/vel_scope, 1) if a0vel<vel_scope else 0
-        mult_a1 = max((vel_scope - a1vel)/vel_scope, 1) if a1vel<vel_scope else 0
-        
-        if Cl > 0:
-            axis0.set_trq(Cl+0.26)
-        else:
-            axis0.set_trq(Cl-0.25)
-            
-        if Cr > 0:
-            axis1.set_trq(Cr+0.28)
-        else:
-            axis1.set_trq(Cr-0.23)
-            
-    def LQR_keyboard():
-        nonlocal x_stable
-        nonlocal theta_stable
-        nonlocal prev_dir
-        nonlocal Xf
-        nonlocal K
-        
-        x_lqr = (axis0.get_pos_turns() * t2m  + axis1.get_pos_turns() * t2m)/2 - pos_init
-        v_lqr = (axis0.get_vel() * t2m + axis1.get_vel() * t2m)/2
-        yaw_angle2 = imu55_dict.get("yaw_angle", 0)
-        
-        #stop the program if the torque or vel gets super high
-        if abs(axis0.get_torque_input()) > 10:
-            print("torque too high: ",axis0.get_torque_input(),"Nm")
-            termination_event.set()
-        if abs(v_lqr) > 5:
-            print("velocity too high: ", v_lqr ,"m/s")
-            termination_event.set()
-            
-        
-        if mode.get("key", "NOPE") == "NONE":
-            print("back to 0")
-            #0.2 is to allow it to slow down
-            Xf = np.array([x_stable+0.3*prev_dir, 0, 0, 0, theta_stable, 0])
-            K = np.array([[-4.47, -8.45, -53.75, -23.05, -0.00, -0.00],[-0.00, -0.00, -0.00, -0.00, 1.29, 1.52]])
-            
-            
-        elif mode.get("key", "NOPE") == "W":
-            prev_dir = 1
-            x_stable = x_lqr
-            theta_stable = yaw_angle2
-            Xf = np.array([x_lqr, 0.25, 0.015, 0, yaw_angle2, 0])
-            K = np.array([[-0.07, -5.55, -47.63, -20.37, 0.00, -0.00],[-0.00, 0.00, -0.00, -0.00, 0.71, 1.26]] )
-            
-        elif mode.get("key", "NOPE") == "S":
-            prev_dir = -1
-            x_stable = x_lqr
-            theta_stable = yaw_angle2
-            Xf = np.array([x_lqr, -0.25, -0.015, 0, yaw_angle2, 0])
-            K = np.array([[-0.07, -5.55, -47.63, -20.37, 0.00, -0.00],[-0.00, 0.00, -0.00, -0.00, 0.71, 1.26]] )
-            
-        elif mode.get("key", "NOPE") == "A":
-            prev_dir = 0
-            x_stable = x_lqr
-            theta_stable = yaw_angle2
-            Xf = np.array([x_lqr, 0, 0, 0, yaw_angle2, -0.75])
-            K = np.array([[-5.00, -7.69, -47.73, -20.30, -0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 0.05, 2.75]] )
-            
-        elif mode.get("key", "NOPE") == "D":
-            prev_dir = 0
-            x_stable = x_lqr
-            theta_stable = yaw_angle2
-            Xf = np.array([x_lqr, 0, 0, 0, yaw_angle2, 0.75])
-            K = np.array([[-5.00, -7.69, -47.73, -20.30, -0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 0.05, 2.75]] )
-            
+        a0vel = abs(axis0.get_vel_cts())
+        a1vel = abs(axis1.get_vel_cts())
 
-        pitch_angle1 = imu85_dict.get("pitch_angle", 0)
-        pitch_rate2 = imu55_dict.get("pitch_rate", 0)
-        yaw_rate2 = imu55_dict.get("yaw_rate", 0)
-        
-        X = np.array([x_lqr, v_lqr, pitch_angle1, pitch_rate2, yaw_angle2, yaw_rate2])
-        D = np.array([[0.5, 0.5],[0.5, -0.5]])
-        Cl, Cr = D @ (-K @ (X - Xf))
-        
-        
-        a0vel = abs(axis0.get_vel())
-        a1vel = abs(axis1.get_vel())
-        
-        vel_scope = 0.02
-        
+        vel_scope = 70 #counts/s
         mult_a0 = max((vel_scope - a0vel)/vel_scope, 1) if a0vel<vel_scope else 0
         mult_a1 = max((vel_scope - a1vel)/vel_scope, 1) if a1vel<vel_scope else 0
         
@@ -211,6 +125,100 @@ def run_odrive(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, 
         else:
             Cr_modded = Cr - 0.2*mult_a1
             
+        # Apply the filtered torque values to the axes
+        axis0.set_trq(Cl_modded)
+        axis1.set_trq(Cr_modded)
+            
+        
+            
+    def LQR_keyboard():
+        nonlocal x_stable
+        nonlocal theta_stable
+        nonlocal prev_dir
+        nonlocal Xf
+        nonlocal K
+        
+        x_lqr = (axis0.get_pos_turns() * t2m  + axis1.get_pos_turns() * t2m)/2 - pos_init
+        v_lqr = (axis0.get_vel() * t2m + axis1.get_vel() * t2m)/2
+        yaw_angle1 = imu85_dict.get("yaw_angle", 0)
+        
+        #stop the program if the torque or vel gets super high
+        if abs(axis0.get_torque_input()) > 10:
+            print("torque too high: ",axis0.get_torque_input(),"Nm")
+            termination_event.set()
+        if abs(v_lqr) > 5:
+            print("velocity too high: ", v_lqr ,"m/s")
+            termination_event.set()
+            
+        
+        if mode.get("key", "NOPE") == "NONE":
+            print("back to 0")
+            #0.3 is to allow it to slow down
+            Xf = np.array([x_stable+0.3*prev_dir, 0, 0, 0, theta_stable, 0])
+            K = np.array([[-5.86, -10.02, -59.49, -28.65, -0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 1.69, 1.69]])
+            
+        elif mode.get("key", "NOPE") == "W":
+            prev_dir = 1
+            x_stable = x_lqr
+            theta_stable = yaw_angle1
+            Xf = np.array([x_lqr, 0.25, 0.015, 0, yaw_angle1, 0])
+            K = np.array([[-0.07, -5.56, -48.70, -23.39, 0.00, -0.00],[0.00, 0.00, 0.00, 0.00, 0.71, 1.26]])
+            
+        elif mode.get("key", "NOPE") == "S":
+            prev_dir = -1
+            x_stable = x_lqr
+            theta_stable = yaw_angle1
+            Xf = np.array([x_lqr, -0.25, -0.015, 0, yaw_angle1, 0])
+            K = np.array([[-0.07, -5.56, -48.70, -23.39, 0.00, -0.00],[0.00, 0.00, 0.00, 0.00, 0.71, 1.26]])
+            
+        elif mode.get("key", "NOPE") == "A":
+            prev_dir = 0
+            x_stable = x_lqr
+            theta_stable = yaw_angle1
+            Xf = np.array([x_lqr, 0, 0, 0, yaw_angle1, -0.75])
+            K = np.array([[-5.00, -8.26, -50.87, -24.33, -0.00, -0.00],[0.00, 0.00, 0.00, 0.00, 0.05, 2.75]]  )
+            
+        elif mode.get("key", "NOPE") == "D":
+            prev_dir = 0
+            x_stable = x_lqr
+            theta_stable = yaw_angle1
+            Xf = np.array([x_lqr, 0, 0, 0, yaw_angle1, 0.75])
+            K = np.array([[-5.00, -8.26, -50.87, -24.33, -0.00, -0.00],[0.00, 0.00, 0.00, 0.00, 0.05, 2.75]] )
+            
+
+        pitch_angle1 = imu85_dict.get("pitch_angle1", 0)
+        yaw_angle1 = imu85_dict.get("yaw_angle1", 0)
+        pitch_rate1 = imu85_dict.get("pitch_rate1", 0)
+        yaw_rate1 = imu85_dict.get("yaw_rate1", 0)
+
+        
+        X = np.array([x_lqr, v_lqr, pitch_angle1, pitch_rate1, yaw_angle1, yaw_rate1])
+        D = np.array([[0.5, 0.5],[0.5, -0.5]])
+        Cl, Cr = D @ (-K @ (X - Xf))
+        
+        
+        # a0vel = abs(axis0.get_vel_cts())
+        # a1vel = abs(axis1.get_vel_cts())
+
+        # vel_scope = 70 #counts/s
+        # mult_a0 = max((vel_scope - a0vel)/vel_scope, 1) if a0vel<vel_scope else 0
+        # mult_a1 = max((vel_scope - a1vel)/vel_scope, 1) if a1vel<vel_scope else 0
+        
+        Cl_modded = Cl
+        Cr_modded = Cr
+
+        # if Cl > 0:
+        #     Cl_modded = Cl + 0.2*mult_a0
+            
+        # else:
+        #     Cl_modded = Cl - 0.2*mult_a0
+            
+        # if Cr > 0:
+        #     Cr_modded = Cr + 0.2*mult_a1
+        # else:
+        #     Cr_modded = Cr - 0.2*mult_a1
+            
+        # Apply the filtered torque values to the axes
         axis0.set_trq(Cl)
         axis1.set_trq(Cr)
         

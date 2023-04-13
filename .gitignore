@@ -4,3 +4,6 @@ venv/git
 */Data/*
 */Examples/ROS/*
 */Vocabulary/
+/maps2d/*
+
+ORBvoc.txt

@@ -15,25 +15,35 @@ def start_imu(IMU85_dict, IMU55_dict, imu_setup_done, termination_event):
     
     while not termination_event.is_set():
         # time.sleep(0.0001)
-        yaw_angle1 = -IMU1.getYawAngle()
-        pitch_angle1 = -IMU1.getPitchAngle()
-        pitch_rate1 = IMU1.getPitchRate()
-        yaw_rate1 = -IMU1.getYawRate()
+        # yaw_angle1 = -IMU1.getYawAngle()
+        # pitch_angle1 = -IMU1.getPitchAngle()
+        # pitch_rate1 = IMU1.getPitchRate()
+        # yaw_rate1 = -IMU1.getYawRate()
         
-        yaw_angle2 = IMU2.getYawAngle()
-        pitch_angle2 = IMU2.getPitchAngle()
-        pitch_rate2 = -IMU2.getPitchRate()
-        yaw_rate2 = -IMU2.getYawRate()
+        # yaw_angle2 = IMU2.getYawAngle()
+        # pitch_angle2 = IMU2.getPitchAngle()
+        # pitch_rate2 = -IMU2.getPitchRate()
+        # yaw_rate2 = -IMU2.getYawRate()
         
-        IMU85_dict['yaw_angle'] = yaw_angle1
-        IMU85_dict['pitch_angle'] = pitch_angle1
+        
+        pitch_angle1, yaw_angle1 = IMU1.getAngles()
+        pitch_rate1, yaw_rate1 = IMU1.getRates()
+        
+        
+        IMU85_dict['yaw_angle'] = -yaw_angle1
+        IMU85_dict['pitch_angle'] = -pitch_angle1
         IMU85_dict['pitch_rate'] = pitch_rate1
-        IMU85_dict['yaw_rate'] = yaw_rate1
+        IMU85_dict['yaw_rate'] = -yaw_rate1
         
-        IMU55_dict['yaw_angle'] = yaw_angle2
-        IMU55_dict['pitch_angle'] = pitch_angle2
-        IMU55_dict['pitch_rate'] = pitch_rate2
-        IMU55_dict['yaw_rate'] = yaw_rate2
+        # IMU55_dict['yaw_angle'] = yaw_angle2
+        # IMU55_dict['pitch_angle'] = pitch_angle2
+        # IMU55_dict['pitch_rate'] = pitch_rate2
+        # IMU55_dict['yaw_rate'] = yaw_rate2
+        
+        IMU55_dict['yaw_angle'] = 0
+        IMU55_dict['pitch_angle'] = 0
+        IMU55_dict['pitch_rate'] = 0
+        IMU55_dict['yaw_rate'] = 0
         
         
         

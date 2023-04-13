@@ -33,6 +33,10 @@ public:
     boost::python::list getTrajectoryPoints() const;
     boost::python::list getTrackedMappoints() const;
     boost::python::list getFloorMappoints() const;
+
+    void saveWithTimestamps(); 
+    void saveKeyFrameTrajectory(); 
+
     boost::python::list getAllMappoints() const;
     boost::python::list getTrackedKeypoints() const;
     PyObject* getIntrinsicsMatrix() const;

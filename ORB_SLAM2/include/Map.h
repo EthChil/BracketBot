@@ -46,12 +46,17 @@ public:
     void EraseKeyFrame(KeyFrame* pKF);
     void SetReferenceMapPoints(const std::vector<MapPoint*> &vpMPs);
 
+    void _WriteMapPoint(ofstream &f, MapPoint* mp,
+		const std::string &end_marker = "\n");
+
     std::vector<KeyFrame*> GetAllKeyFrames();
     std::vector<MapPoint*> GetAllMapPoints();
     std::vector<MapPoint*> GetReferenceMapPoints();
 
     cv::Mat getGroundPlaneParams();
     void setGroundPlaneParams(float c0, float c1, float c2);
+
+    bool SaveWithTimestamps(const string &filename);
 
     long unsigned int MapPointsInMap();
     long unsigned  KeyFramesInMap();

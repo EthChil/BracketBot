@@ -1,12 +1,14 @@
 from multiprocessing import Process, Manager, Event, Queue
 import signal
-import keyboard
+# import keyboard
+from pynput import keyboard
 import time
 
 from odrive_setup_process import setup_odrive
 from imu_process import start_imu
 from odrive_process import run_odrive
 from logging_process import logger
+from orbslam_process import run_orbslam
 
 ALLOWED_MODES = ["IDLE", "BALANCE", "KEYBOARD"]
 
@@ -26,22 +28,21 @@ def sigint_handler(signal, frame):
 def keyboard_input(drive_mode, termination_event):
     default_value = "NONE"
     drive_mode["key"] = default_value
-    keys = ['w', 'a', 's', 'd']
+    keys = {'w', 'a', 's', 'd'}
 
-    while not termination_event.is_set():
-        time.sleep(0.05)
+    def on_press(key):
+        try:
+            if key.char.lower() in keys:
+                drive_mode["key"] = key.char.upper()
+        except AttributeError:
+            pass
 
-        pressed_key = default_value
-        for key in keys:
-            if keyboard.is_pressed(key):
-                pressed_key = key.upper()
-                break
+    def on_release(key):
+        drive_mode["key"] = default_value
 
-        drive_mode["key"] = pressed_key
+    with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
+        listener.join()
                 
-                
-                
-        
             
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, sigint_handler)
@@ -71,16 +72,19 @@ if __name__ == "__main__":
         odrive_runner_process = Process(target=run_odrive, args=(drive_mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, ego_estimation, drive_stats, set_points, termination_event))
         logger_runner_process = Process(target=logger, args=(drive_mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, ego_estimation, drive_stats, set_points, termination_event))
         keyboard_input_process = Process(target=keyboard_input, args=(drive_mode, termination_event))
+        # orbslam_runner_process = Process(target=run_orbslam, args=('ORBvoc.txt', 'arducam.yaml', termination_event))
 
         imu_runner_process.start()
         odrive_runner_process.start()
         logger_runner_process.start()
         keyboard_input_process.start()
+        # orbslam_runner_process.start()
         
         imu_runner_process.join()
         odrive_runner_process.join()
         logger_runner_process.join()
         keyboard_input_process.join()
+        # orbslam_runner_process.join()
         
         
           
