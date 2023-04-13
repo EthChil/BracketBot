@@ -14,96 +14,82 @@ from multiprocessing import Process, Manager, Event
 import IMU
 
 
-def LQR(K, devices, pos_init):
-    t2m = 0.528 # Meters per turn
-    W = 0.567   # Distance between wheels in meters
-
+def LQR(K, devices, pos_init, angle_init, start_time):
     IMU1, IMU2, axis0, axis1 = devices
     
-    t_total1 = time.time()
-
-    t_imu1 = time.time()
-    t_imuread1 = time.time()
-    
-    pitch_angle1, yaw_angle1 = IMU1.getAngles()
-    
-    t_imuread2 = time.time()
-    
-    pitch_rate1, yaw_rate1 = IMU1.getRates()
-    
-    t_imuread3 = time.time()
-    
-    t_imu2 = time.time()
-    t_imu = t_imu2 - t_imu1
-    
-    t_imureaded1 = t_imuread2-t_imuread1
-    t_imureaded2 = t_imuread3-t_imuread2
+    t2m = 0.528
+    c2m = t2m/8192
+   # time.sleep(0.0001)
+        
+    a0_pos_cts = axis0.get_pos_cts()
+    a1_pos_cts = axis1.get_pos_cts()
+    a0_vel_cts = axis0.get_vel_cts()
+    a1_vel_cts = axis1.get_vel_cts()
+    a0_trq_input = axis0.get_torque_input()
     
     #stop the program if the torque or vel gets super high
-    t_odrive_read1 = time.time()
-    
-    odrive_pos = 
-    odrive_vel = axis0.get_vel()
-    
-    
-    
-    if abs(Cl_modded) > 10:
+    if abs(a0_trq_input) > 12:
         print("torque too high: ",axis0.get_torque_input(),"Nm")
-        axis0.set_trq(0)
-        axis1.set_trq(0)
-        exit(0)
-    if abs(axis0.get_vel()) > 3:
-        print("velocity too high: ", axis0.get_vel() ,"m/s")
-        axis0.set_trq(0)
-        axis1.set_trq(0)
-        exit(0)
-
-    Xf = np.array([0, 0, 0, 0, 0, 0])
-    X = np.array([axis0.get_pos_turns()*t2m-pos_init, axis0.get_vel()*t2m, -pitch_angle1, pitch_rate1, -yaw_angle1, -yaw_rate1])
-    D = np.array([[0.5, 0.5],[0.5, -0.5]])
-    Cl, Cr = D @ (-K @ (X - Xf))
+        stop_event.set()
     
-    a0vel = abs(axis0.get_vel_cts())
-    a1vel = abs(axis1.get_vel_cts())
+    if abs(a0_vel_cts*c2m) > 4:
+        print("velocity too high: ",axis0.get_vel(),"turns/s")
+        stop_event.set()
+    
+    
+    Xf = np.array([0, 0, 0, 0, 0, 0])
 
-    vel_scope = 70 #counts/s
-    mult_a0 = max((vel_scope - a0vel)/vel_scope, 1) if a0vel<vel_scope else 0
-    mult_a1 = max((vel_scope - a1vel)/vel_scope, 1) if a1vel<vel_scope else 0
+    x = (a0_pos_cts * c2m  + a1_pos_cts * c2m)/2 - pos_init
+    v = (a0_vel_cts * c2m + a1_vel_cts * c2m)/2
+
+
+    yaw_angle2 =0
+    pitch_angle2 = 0
+    pitch_rate2 = 0
+    yaw_rate2 =0
+    
+    pitch_rate1, yaw_rate1 = IMU1.getRates()
+    pitch_angle1, yaw_angle1 = IMU1.getAngles()
+    
+    
+    X = np.array([x, v, -pitch_angle1, pitch_rate1, -yaw_angle1-angle_init, -yaw_rate1])
+
+    # U = -K @ (X - Xf)
+
+    D = np.array([[0.5, 0.5],[0.5, -0.5]])
+    # print("K mat: ", K)
+    # print("X mat: ", X)
+    # print("Xf mat: ", Xf)
+    # print("D mat:", D)
+    Cl, Cr = D @ (-K @ (X - Xf))
+    # print("Cl: ", Cl)
+    # print("Cr: ", Cr)
+    
+
+
+    vel_scope = 5 #counts/s
+    mult_a0 = max((vel_scope - abs(a0_vel_cts))/vel_scope, 1) if a0_vel_cts<vel_scope else 0
+    mult_a1 = max((vel_scope - abs(a1_vel_cts))/vel_scope, 1) if a1_vel_cts<vel_scope else 0
     
     Cl_modded = Cl
     Cr_modded = Cr
 
     if Cl > 0:
-        Cl_modded = Cl + 0.2*mult_a0
+        Cl_modded = Cl + 0.15*mult_a0
         
     else:
-        Cl_modded = Cl - 0.2*mult_a0
+        Cl_modded = Cl - 0.15*mult_a0
         
     if Cr > 0:
-        Cr_modded = Cr + 0.2*mult_a1
+        Cr_modded = Cr + 0.15*mult_a1
     else:
-        Cr_modded = Cr - 0.2*mult_a1
+        Cr_modded = Cr - 0.15*mult_a1
         
     # Apply the filtered torque values to the axes
     axis0.set_trq(Cl_modded)
     axis1.set_trq(Cr_modded)
 
-    t_odrive_read2 = time.time()
-    t_odrive_read = t_odrive_read2 - t_odrive_read1
-    
-    t_odrive_write1 = time.time()
-    # axis0.set_trq(Cl)
-    # axis1.set_trq(Cr)
-    t_odrive_write2 = time.time()
-    t_odrive_write = t_odrive_write2 - t_odrive_write1
-    # if you want custom anticogging
-    # axis0.set_trq(Cl_modded)
-    # axis1.set_trq(Cr_modded)
-    
-    t_total2 = time.time()
-    t_total = t_total2 - t_total1
-    
-    return X, [t_imu, t_odrive_read, t_odrive_write, t_imureaded1, t_imureaded2, t_total]
+    return X#, [t_imu, t_odrive_read, t_odrive_write, t_imureaded1, t_imureaded2, t_total]
 
 
 def calculate_gains(A, B, Q, R):
@@ -228,7 +214,7 @@ def curses_wrapper(K_dict, stop_event):
 
 def balance(K_dict, stop_event):
     import sys
-    sys.stdout = open(os.devnull, 'w')
+    # sys.stdout = open(os.devnull, 'w')
     # SETUP IMU
     IMU1 = IMU.IMU_BNO085()
     IMU1.setupIMU()
@@ -247,15 +233,26 @@ def balance(K_dict, stop_event):
     devices = [IMU1, IMU2, axis0, axis1]
 
     t2m = 0.528
-    pos_init = axis0.get_pos_turns()*t2m
+    c2m = t2m/8192
+    
+    pos_init = (axis0.get_pos_cts() * c2m + axis1.get_pos_cts() * c2m)/2
+    
+    pitch_angle1=IMU1.getPitchAngle() 
+    yaw_angle1=IMU1.getYawAngle()
+    pitch_rate1=IMU1.getPitchRate()
+    yaw_rate1=IMU1.getYawRate()
+    
+    start_angle = -yaw_angle1
+    
+    start_time = time.time()
     
     
-    K_dict['state'] = []
-    K_dict['times'] = []
-    while not stop_event.is_set():
-        state, times = LQR(K_dict['K'], devices, pos_init)
-        K_dict['state'] = K_dict['state'] + [state]
-        K_dict['times'] = K_dict['times'] + [times]
+    # K_dict['state'] = []
+    # K_dict['times'] = []
+    while time.time()-start_time < 5:
+        state = LQR(K_dict['K'], devices, pos_init, start_angle, start_time)
+        # K_dict['state'] = K_dict['state'] + [state]
+        # K_dict['times'] = K_dict['times'] + [times]
     
     axis0.set_trq(0)
     axis1.set_trq(0)
@@ -265,7 +262,7 @@ if __name__ == "__main__":
     with Manager() as manager:
         K_dict = manager.dict()
 
-        K_dict['K'] = np.array([[-5.86, -10.02, -59.49, -28.65, -0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 1.69, 1.69]])
+        K_dict['K'] = np.array([[-7.56, -12.01, -67.08, -32.35, 0.00, 0.00],[-0.00, -0.00, -0.00, -0.00, 1.69, 1.69]])
 
         stop_event = Event()
         # curses_thread = Process(target=get_k, args=(None, K_dict, stop_event))
@@ -279,27 +276,27 @@ if __name__ == "__main__":
     
 
         print(K_dict['K'])
-        dts = np.stack(K_dict['times'])
-        states = np.stack(K_dict['state'])
+        # dts = np.stack(K_dict['times'])
+        # states = np.stack(K_dict['state'])
         
-    fig, axs = plt.subplots(nrows=7, ncols=1, figsize=(8, 100))
+    # fig, axs = plt.subplots(nrows=7, ncols=1, figsize=(8, 100))
 
-    axs[0].set_title('dt')
-    axs[0].plot(dts[:,0], label='imu time')
-    axs[0].plot(dts[:,1], label='odrive read time')
-    axs[0].plot(dts[:,2], label='odrive write time')
-    axs[0].plot(dts[:,3], label='imuread1')
-    axs[0].plot(dts[:,4], label='imuread2')
-    axs[0].plot(dts[:,5], label='total loop time')
-    axs[0].xaxis.grid(True, linestyle='--', alpha=0.5)  # add x-axis grid
-    axs[0].legend()
+    # axs[0].set_title('dt')
+    # axs[0].plot(dts[:,0], label='imu time')
+    # axs[0].plot(dts[:,1], label='odrive read time')
+    # axs[0].plot(dts[:,2], label='odrive write time')
+    # axs[0].plot(dts[:,3], label='imuread1')
+    # axs[0].plot(dts[:,4], label='imuread2')
+    # axs[0].plot(dts[:,5], label='total loop time')
+    # axs[0].xaxis.grid(True, linestyle='--', alpha=0.5)  # add x-axis grid
+    # axs[0].legend()
     
-    for i, (var, name) in enumerate(zip(states.T, ['x', 'v', 'p', 'w', 'a', 'y'])):
-        axs[i+1].set_title(name)
-        axs[i+1].plot(var)
-        axs[i+1].xaxis.grid(True, linestyle='--', alpha=0.5)  # add x-axis grid
+    # for i, (var, name) in enumerate(zip(states.T, ['x', 'v', 'p', 'w', 'a', 'y'])):
+    #     axs[i+1].set_title(name)
+    #     axs[i+1].plot(var)
+    #     axs[i+1].xaxis.grid(True, linestyle='--', alpha=0.5)  # add x-axis grid
 
-    plt.savefig(f'lqr_params/plots.png')
+    # plt.savefig(f'lqr_params/plots.png')
 
 
 
