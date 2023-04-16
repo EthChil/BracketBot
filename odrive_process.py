@@ -49,7 +49,7 @@ def run_odrive(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, 
     Xf = np.array([0, 0, 0, 0, 0, 0])
     #Q = diag([100 1 10 1 10 1]); % 'x', 'v', 'θ', 'ω', 'δ', "δ'
     #R = diag([3 3]); % Torque cost Cθ,Cδ
-    K = np.array([[-5.77, -8.18, -48.46, -20.72, -0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 0.58, 1.10]])
+    K = np.array([[-4.08, -8.11, -52.57, -25.27, -0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 1.83, 1.77]] )
     
     start_time = time.time()
     cur_time = time.time() - start_time
@@ -83,8 +83,12 @@ def run_odrive(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, 
         axis1.set_trq(0)
         
     def LQR():
+        nonlocal K
+        nonlocal Xf
+        
         x_lqr = (axis0.get_pos_turns() * t2m  + axis1.get_pos_turns() * t2m)/2 - pos_init
         v_lqr = (axis0.get_vel() * t2m + axis1.get_vel() * t2m)/2
+        
         pitch_angle1 = imu85_dict.get("pitch_angle", 0)
         yaw_angle1 = imu85_dict.get("yaw_angle", 0)
         pitch_rate1 = imu85_dict.get("pitch_rate", 0)
@@ -104,30 +108,9 @@ def run_odrive(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, 
             print("velocity too high: ", v_lqr ,"m/s")
             termination_event.set()
         
-        a0vel = abs(axis0.get_vel_cts())
-        a1vel = abs(axis1.get_vel_cts())
 
-        vel_scope = 70 #counts/s
-        mult_a0 = max((vel_scope - a0vel)/vel_scope, 1) if a0vel<vel_scope else 0
-        mult_a1 = max((vel_scope - a1vel)/vel_scope, 1) if a1vel<vel_scope else 0
-        
-        Cl_modded = Cl
-        Cr_modded = Cr
-
-        if Cl > 0:
-            Cl_modded = Cl + 0.2*mult_a0
-            
-        else:
-            Cl_modded = Cl - 0.2*mult_a0
-            
-        if Cr > 0:
-            Cr_modded = Cr + 0.2*mult_a1
-        else:
-            Cr_modded = Cr - 0.2*mult_a1
-            
-        # Apply the filtered torque values to the axes
-        axis0.set_trq(Cl_modded)
-        axis1.set_trq(Cr_modded)
+        # axis0.set_trq(Cl)
+        # axis1.set_trq(Cr)
             
         
             
@@ -136,7 +119,6 @@ def run_odrive(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, 
         nonlocal theta_stable
         nonlocal prev_dir
         nonlocal Xf
-        nonlocal K
         
         x_lqr = (axis0.get_pos_turns() * t2m  + axis1.get_pos_turns() * t2m)/2 - pos_init
         v_lqr = (axis0.get_vel() * t2m + axis1.get_vel() * t2m)/2
@@ -155,35 +137,36 @@ def run_odrive(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, 
             print("back to 0")
             #0.3 is to allow it to slow down
             Xf = np.array([x_stable+0.3*prev_dir, 0, 0, 0, theta_stable, 0])
-            K = np.array([[-5.86, -10.02, -59.49, -28.65, -0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 1.69, 1.69]])
+            Xf = np.array([0, 0, 0, 0, 0, 0])
+            K = np.array([[-4.08, -8.11, -52.57, -25.27, -0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 1.83, 1.77]] )
             
         elif mode.get("key", "NOPE") == "W":
             prev_dir = 1
             x_stable = x_lqr
             theta_stable = yaw_angle1
             Xf = np.array([x_lqr, 0.25, 0.015, 0, yaw_angle1, 0])
-            K = np.array([[-0.07, -5.56, -48.70, -23.39, 0.00, -0.00],[0.00, 0.00, 0.00, 0.00, 0.71, 1.26]])
+            K = np.array([[-0.07, -5.56, -48.67, -23.37, -0.00, -0.00],[0.00, 0.00, 0.00, 0.00, 2.24, 1.98]])
             
         elif mode.get("key", "NOPE") == "S":
             prev_dir = -1
             x_stable = x_lqr
             theta_stable = yaw_angle1
             Xf = np.array([x_lqr, -0.25, -0.015, 0, yaw_angle1, 0])
-            K = np.array([[-0.07, -5.56, -48.70, -23.39, 0.00, -0.00],[0.00, 0.00, 0.00, 0.00, 0.71, 1.26]])
+            K = np.array([[-0.07, -5.56, -48.67, -23.37, -0.00, -0.00],[0.00, 0.00, 0.00, 0.00, 2.24, 1.98]])
             
         elif mode.get("key", "NOPE") == "A":
             prev_dir = 0
             x_stable = x_lqr
             theta_stable = yaw_angle1
             Xf = np.array([x_lqr, 0, 0, 0, yaw_angle1, -0.75])
-            K = np.array([[-5.00, -8.26, -50.87, -24.33, -0.00, -0.00],[0.00, 0.00, 0.00, 0.00, 0.05, 2.75]]  )
+            K = np.array([[-5.00, -8.21, -50.29, -24.16, 0.00, -0.00],[-0.00, -0.00, -0.00, -0.00, 0.05, 3.88]])
             
         elif mode.get("key", "NOPE") == "D":
             prev_dir = 0
             x_stable = x_lqr
             theta_stable = yaw_angle1
             Xf = np.array([x_lqr, 0, 0, 0, yaw_angle1, 0.75])
-            K = np.array([[-5.00, -8.26, -50.87, -24.33, -0.00, -0.00],[0.00, 0.00, 0.00, 0.00, 0.05, 2.75]] )
+            K = np.array([[-5.00, -8.21, -50.29, -24.16, 0.00, -0.00],[-0.00, -0.00, -0.00, -0.00, 0.05, 3.88]])
             
 
         pitch_angle1 = imu85_dict.get("pitch_angle1", 0)
@@ -192,40 +175,17 @@ def run_odrive(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, 
         yaw_rate1 = imu85_dict.get("yaw_rate1", 0)
 
         
+        
         X = np.array([x_lqr, v_lqr, pitch_angle1, pitch_rate1, yaw_angle1, yaw_rate1])
         D = np.array([[0.5, 0.5],[0.5, -0.5]])
         Cl, Cr = D @ (-K @ (X - Xf))
         
-        
-        # a0vel = abs(axis0.get_vel_cts())
-        # a1vel = abs(axis1.get_vel_cts())
 
-        # vel_scope = 70 #counts/s
-        # mult_a0 = max((vel_scope - a0vel)/vel_scope, 1) if a0vel<vel_scope else 0
-        # mult_a1 = max((vel_scope - a1vel)/vel_scope, 1) if a1vel<vel_scope else 0
-        
-        Cl_modded = Cl
-        Cr_modded = Cr
-
-        # if Cl > 0:
-        #     Cl_modded = Cl + 0.2*mult_a0
-            
-        # else:
-        #     Cl_modded = Cl - 0.2*mult_a0
-            
-        # if Cr > 0:
-        #     Cr_modded = Cr + 0.2*mult_a1
-        # else:
-        #     Cr_modded = Cr - 0.2*mult_a1
-            
-        # Apply the filtered torque values to the axes
-        axis0.set_trq(Cl)
-        axis1.set_trq(Cr)
+        # axis0.set_trq(Cl)
+        # axis1.set_trq(Cr)
         
         
-        drive_stats["stats"] = (x_lqr, v_lqr, Cl, Cr, Cl_modded, Cr_modded)
-        
-        
+        drive_stats["stats"] = (x_lqr, v_lqr, Cl, Cr)
         
         
         
@@ -240,9 +200,8 @@ def run_odrive(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, 
         x, y, theta = update_position(x, y, theta, pos_a0_delta, pos_a1_delta, W)
         
         set_points['setpoints'] = Xf
-        ego_estimation["ego"] = (x, y, theta)
+        ego_estimation["ego"] = (x, y, theta, pos_a0_cur, pos_a1_cur)
         
-        # print(mode.get("key", "NOPE"))
         
         if mode.get("mode", "IDLE") == "BALANCE":
             LQR()
@@ -257,6 +216,8 @@ def run_odrive(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, 
         # Goes at the end of the loop
         pos_a0_prev = pos_a0_cur
         pos_a1_prev = pos_a1_cur
+        
+    print("DONE odrive")    
         
     axis0.set_trq(0)
     axis1.set_trq(0)

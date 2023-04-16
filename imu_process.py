@@ -13,26 +13,17 @@ def start_imu(IMU85_dict, IMU55_dict, imu_setup_done, termination_event):
     print("IMU setups done")
     imu_setup_done.set() 
     
+    
+    pitch_angle1_init, yaw_angle1_init = IMU1.getAngles()
+    
     while not termination_event.is_set():
-        # time.sleep(0.0001)
-        # yaw_angle1 = -IMU1.getYawAngle()
-        # pitch_angle1 = -IMU1.getPitchAngle()
-        # pitch_rate1 = IMU1.getPitchRate()
-        # yaw_rate1 = -IMU1.getYawRate()
-        
-        # yaw_angle2 = IMU2.getYawAngle()
-        # pitch_angle2 = IMU2.getPitchAngle()
-        # pitch_rate2 = -IMU2.getPitchRate()
-        # yaw_rate2 = -IMU2.getYawRate()
-        
-        
+
         pitch_angle1, yaw_angle1 = IMU1.getAngles()
         pitch_rate1, yaw_rate1 = IMU1.getRates()
         
-        
-        IMU85_dict['yaw_angle'] = -yaw_angle1
         IMU85_dict['pitch_angle'] = -pitch_angle1
         IMU85_dict['pitch_rate'] = pitch_rate1
+        IMU85_dict['yaw_angle'] = -(yaw_angle1-yaw_angle1_init)
         IMU85_dict['yaw_rate'] = -yaw_rate1
         
         # IMU55_dict['yaw_angle'] = yaw_angle2

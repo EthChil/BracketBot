@@ -29,9 +29,9 @@ c2m = t2m/8192
 
 
 
-# Q = diag([200 30 0.1 0.01 10 1]); % 'x', 'v', 'θ', 'ω', 'δ', "δ'
-# R = diag([3.5 3.5]); % Torque cost Cθ,Cδ
-K = np.array([[-7.56, -12.01, -67.08, -32.35, 0.00, 0.00],[-0.00, -0.00, -0.00, -0.00, 1.69, 1.69]])
+#Q = diag([50 30 0.1 0.01 10 1]); % 'x', 'v', 'θ', 'ω', 'δ', "δ'
+#R = diag([3 3]); % Torque cost Cθ,Cδ
+K = np.array([[-4.08, -8.11, -52.57, -25.27, -0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 1.83, 1.77]]  )
 
 
 
@@ -191,7 +191,7 @@ def LQR(axis0, axis1):
         
 
 
-        vel_scope = 5 #counts/s
+        vel_scope = 20 #counts/s
         mult_a0 = max((vel_scope - abs(a0_vel_cts))/vel_scope, 1) if a0_vel_cts<vel_scope else 0
         mult_a1 = max((vel_scope - abs(a1_vel_cts))/vel_scope, 1) if a1_vel_cts<vel_scope else 0
         
@@ -210,8 +210,8 @@ def LQR(axis0, axis1):
             Cr_modded = Cr - 0.15*mult_a1
             
         # Apply the filtered torque values to the axes
-        axis0.set_trq(Cl_modded)
-        axis1.set_trq(Cr_modded)
+        axis0.set_trq(Cl)
+        axis1.set_trq(Cr)
             
 
         # axis0.set_trq(Cl_modded)

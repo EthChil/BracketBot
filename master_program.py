@@ -1,6 +1,4 @@
 from multiprocessing import Process, Manager, Event, Queue
-import signal
-# import keyboard
 from pynput import keyboard
 import time
 
@@ -21,31 +19,43 @@ def prompt_drive_mode():
             return "IDLE"
         print("Invalid drive mode. Please enter one of the allowed modes.")
         
-def sigint_handler(signal, frame):
-    print("Ctrl+C pressed, setting termination event")
-    termination_event.set()
                 
+def on_key_press(key, drive_mode, termination_event):
+    try:
+        key_name = key.char.upper()
+    except AttributeError:
+        key_name = None
+    
+    if key_name in ['W', 'A', 'S', 'D']:
+        drive_mode["key"] = key_name
+    elif key_name == 'Q':  # Check for the 'Q' key
+        print("cancelling")
+        termination_event.set()  # Set the termination_event
+
+def on_key_release(key, drive_mode):
+    try:
+        key_name = key.char.upper()
+    except AttributeError:
+        key_name = None
+    
+    if key_name in ['W', 'A', 'S', 'D']:
+        drive_mode["key"] = "NONE"
+
 def keyboard_input(drive_mode, termination_event):
     default_value = "NONE"
     drive_mode["key"] = default_value
-    keys = {'w', 'a', 's', 'd'}
 
-    def on_press(key):
-        try:
-            if key.char.lower() in keys:
-                drive_mode["key"] = key.char.upper()
-        except AttributeError:
+    with keyboard.Listener(
+        on_press=lambda key: on_key_press(key, drive_mode, termination_event),
+        on_release=lambda key: on_key_release(key, drive_mode)
+    ) as listener:
+        while not termination_event.is_set():
             pass
 
-    def on_release(key):
-        drive_mode["key"] = default_value
-
-    with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
-        listener.join()
+        listener.stop()
                 
             
 if __name__ == "__main__":
-    signal.signal(signal.SIGINT, sigint_handler)
     selected_drive_mode = prompt_drive_mode()
     
     with Manager() as manager:

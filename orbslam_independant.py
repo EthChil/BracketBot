@@ -7,6 +7,8 @@ from odriveDriver import Axis
 from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import RANSACRegressor
 
+import shutil
+import os
 import sys
 import os.path
 import orbslam2
@@ -68,14 +70,14 @@ def run_orbslam(vocab_path, settings_path):
     driveable_area = []
     cur_time = time.time()
     last_time = cur_time
-    while time.time() < (start_time+180):
+    while time.time() < (start_time+600):
         cur_time = time.time()
         timestamp = cur_time-start_time
         ret_val, frame = video_capture.read()
         if not ret_val:
             continue
         
-        cv2.imwrite(prefix+"slam_image_" + timestamp, frame)
+        cv2.imwrite(prefix+"/vid/"+"slam_image_" + str(timestamp)+".png", frame)
 
         t1 = time.time()
         slam.process_image_mono(frame, t1)
@@ -96,40 +98,40 @@ def run_orbslam(vocab_path, settings_path):
         np.save(prefix+"ego_ys.npy", ys_ego)
         np.save(prefix+"ego_thetas.npy", thetas_ego)
 
-        if last_time < (cur_time+10): #only run this every 10 seconds
-            if mps.size > 0 and kps.size > 0:
-                # floor_inds = get_floor_points_kps(kps)
-                floor_inds = get_floor_points_mps(mps)
-                slam.set_floor_mappoints(floor_inds.tolist())
+        # if last_time < (cur_time+10): #only run this every 10 seconds
+        #     if mps.size > 0 and kps.size > 0:
+        #         # floor_inds = get_floor_points_kps(kps)
+        #         floor_inds = get_floor_points_mps(mps)
+        #         slam.set_floor_mappoints(floor_inds.tolist())
 
-                K = slam.get_intrinsics_matrix()
-                Rt = slam.get_extrinsics_matrix()
-                Rts = np.concatenate([Rts, Rt[np.newaxis]], axis=0) if Rts is not None else Rt[np.newaxis]
+        #         K = slam.get_intrinsics_matrix()
+        #         Rt = slam.get_extrinsics_matrix()
+        #         Rts = np.concatenate([Rts, Rt[np.newaxis]], axis=0) if Rts is not None else Rt[np.newaxis]
                 
-                # Fit ground plane
-                floor_mps = np.array(slam.get_floor_mappoints())
-                plane_coefs = fit_plane_model(floor_mps)
-                slam.set_ground_plane_params(*plane_coefs)
+        #         # Fit ground plane
+        #         floor_mps = np.array(slam.get_floor_mappoints())
+        #         plane_coefs = fit_plane_model(floor_mps)
+        #         slam.set_ground_plane_params(*plane_coefs)
 
-                # Project floor contours
-                floor_contours = get_floor_contours(frame)
-                for contour in floor_contours:
-                    pts3d = uv_to_plane3d(contour, K, Rt, plane_coefs)
-                    # print("***********************************")
-                    # for pt, mp in zip(pts3d, mps[floor_inds]):
-                    #     print(pt, mp)
-                    # print("***********************************")
-                    # self.slam.add_floor_contour(pts3d)
-                    pts2d = plane3d_to_2d(pts3d, plane_coefs)
-                    driveable_area.append(pts2d)
-                np.save(prefix+'driveable_area.npy', np.stack(driveable_area))
+        #         # Project floor contours
+        #         floor_contours = get_floor_contours(frame)
+        #         for contour in floor_contours:
+        #             pts3d = uv_to_plane3d(contour, K, Rt, plane_coefs)
+        #             # print("***********************************")
+        #             # for pt, mp in zip(pts3d, mps[floor_inds]):
+        #             #     print(pt, mp)
+        #             # print("***********************************")
+        #             # self.slam.add_floor_contour(pts3d)
+        #             pts2d = plane3d_to_2d(pts3d, plane_coefs)
+        #             driveable_area.append(pts2d)
+        #         np.save(prefix+'driveable_area.npy', np.stack(driveable_area))
 
-                # Project camera path
-                camera_path = project_on_plane(Rts[:,:,3], plane_coefs)
-                camera_path = plane3d_to_2d(camera_path, plane_coefs)
-                np.save(prefix+'camera_path.npy', camera_path)
+        #         # Project camera path
+        #         camera_path = project_on_plane(Rts[:,:,3], plane_coefs)
+        #         camera_path = plane3d_to_2d(camera_path, plane_coefs)
+        #         np.save(prefix+'camera_path.npy', camera_path)
                 
-                last_time = cur_time
+        #         last_time = cur_time
             
             
 
@@ -195,4 +197,11 @@ def save_trajectory(trajectory, filename):
 
 
 if __name__ == '__main__':
+    path_to_del = os.path.join(os.getcwd(), "orbslam_independant_files/vid")
+    for item in os.listdir(path_to_del):
+        item_path = os.path.join(path_to_del, item)
+        
+        if os.path.isfile(item_path):
+            os.remove(item_path)
+        
     run_orbslam("ORBvoc.txt", "arducam.yaml")

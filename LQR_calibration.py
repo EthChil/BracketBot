@@ -75,19 +75,19 @@ def LQR(K, devices, pos_init, angle_init, start_time):
     Cr_modded = Cr
 
     if Cl > 0:
-        Cl_modded = Cl + 0.15*mult_a0
+        Cl_modded = Cl + 0.05*mult_a0
         
     else:
-        Cl_modded = Cl - 0.15*mult_a0
+        Cl_modded = Cl - 0.05*mult_a0
         
     if Cr > 0:
-        Cr_modded = Cr + 0.15*mult_a1
+        Cr_modded = Cr + 0.05*mult_a1
     else:
-        Cr_modded = Cr - 0.15*mult_a1
+        Cr_modded = Cr - 0.05*mult_a1
         
     # Apply the filtered torque values to the axes
-    axis0.set_trq(Cl_modded)
-    axis1.set_trq(Cr_modded)
+    axis0.set_trq(Cl)
+    axis1.set_trq(Cr)
 
     return X#, [t_imu, t_odrive_read, t_odrive_write, t_imureaded1, t_imureaded2, t_total]
 
@@ -189,11 +189,11 @@ def get_k(stdscr, K_dict, stop_event):
     
     t0 = time.time()
     while time.time() < t0 + 30:
-        # stop_flag, params_updated, cur_idx = update_curses(stdscr, cur_idx, vals, labels, lqr_params)
-        # if stop_flag:
-        #     stop_event.set()
-        #     break
-        params_updated = False
+        stop_flag, params_updated, cur_idx = update_curses(stdscr, cur_idx, vals, labels, lqr_params)
+        if stop_flag:
+            stop_event.set()
+            break
+        # params_updated = False
     
         if params_updated:
             Q = np.diag(lqr_params[:6])
@@ -214,7 +214,7 @@ def curses_wrapper(K_dict, stop_event):
 
 def balance(K_dict, stop_event):
     import sys
-    # sys.stdout = open(os.devnull, 'w')
+    sys.stdout = open(os.devnull, 'w')
     # SETUP IMU
     IMU1 = IMU.IMU_BNO085()
     IMU1.setupIMU()
@@ -247,11 +247,11 @@ def balance(K_dict, stop_event):
     start_time = time.time()
     
     
-    # K_dict['state'] = []
+    K_dict['state'] = []
     # K_dict['times'] = []
-    while time.time()-start_time < 5:
+    while time.time()-start_time < 200 and not stop_event.is_set():
         state = LQR(K_dict['K'], devices, pos_init, start_angle, start_time)
-        # K_dict['state'] = K_dict['state'] + [state]
+        K_dict['state'] = K_dict['state'] + [state]
         # K_dict['times'] = K_dict['times'] + [times]
     
     axis0.set_trq(0)
@@ -265,21 +265,22 @@ if __name__ == "__main__":
         K_dict['K'] = np.array([[-7.56, -12.01, -67.08, -32.35, 0.00, 0.00],[-0.00, -0.00, -0.00, -0.00, 1.69, 1.69]])
 
         stop_event = Event()
-        # curses_thread = Process(target=get_k, args=(None, K_dict, stop_event))
+        # curses_thread = Process(target=get_k, args=(None, K_dict, stop_event)) # Disable curses
+        curses_thread = Process(target=curses_wrapper, args=(K_dict, stop_event))
         balance_thread = Process(target=balance, args=(K_dict, stop_event))
         
-        # curses_thread.start()
+        curses_thread.start()
         balance_thread.start()
 
-        # curses_thread.join()
+        curses_thread.join()
         balance_thread.join()
     
 
         print(K_dict['K'])
         # dts = np.stack(K_dict['times'])
-        # states = np.stack(K_dict['state'])
+        states = np.stack(K_dict['state'])
         
-    # fig, axs = plt.subplots(nrows=7, ncols=1, figsize=(8, 100))
+    fig, axs = plt.subplots(nrows=6, ncols=1, figsize=(8, 100))
 
     # axs[0].set_title('dt')
     # axs[0].plot(dts[:,0], label='imu time')
@@ -291,12 +292,12 @@ if __name__ == "__main__":
     # axs[0].xaxis.grid(True, linestyle='--', alpha=0.5)  # add x-axis grid
     # axs[0].legend()
     
-    # for i, (var, name) in enumerate(zip(states.T, ['x', 'v', 'p', 'w', 'a', 'y'])):
-    #     axs[i+1].set_title(name)
-    #     axs[i+1].plot(var)
-    #     axs[i+1].xaxis.grid(True, linestyle='--', alpha=0.5)  # add x-axis grid
+    for i, (var, name) in enumerate(zip(states.T, ['x', 'v', 'p', 'w', 'a', 'y'])):
+        axs[i].set_title(name)
+        axs[i].plot(var)
+        axs[i].xaxis.grid(True, linestyle='--', alpha=0.5)  # add x-axis grid
 
-    # plt.savefig(f'lqr_params/plots.png')
+    plt.savefig(f'lqr_params/plots.png')
 
 
 
