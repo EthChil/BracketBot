@@ -86,11 +86,8 @@ def run_odrive(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, 
         nonlocal K
         nonlocal Xf
         
-        
         x_lqr = (axis0.get_pos_turns() * t2m  + axis1.get_pos_turns() * t2m)/2 - pos_init
-        
         v_lqr = (axis0.get_vel() * t2m + axis1.get_vel() * t2m)/2
-        
         
         pitch_angle1 = imu85_dict.get("pitch_angle", 0)
         yaw_angle1 = imu85_dict.get("yaw_angle", 0)
@@ -103,7 +100,6 @@ def run_odrive(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, 
         
         drive_stats["stats"] = (x_lqr, v_lqr, Cl, Cr)
         
-        
         #stop the program if the torque or vel gets super high
         if abs(axis0.get_torque_input()) > 10:
             print("torque too high: ",axis0.get_torque_input(),"Nm")
@@ -115,7 +111,6 @@ def run_odrive(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, 
             
         print('7')
         
-
         # axis0.set_trq(Cl)
         # axis1.set_trq(Cr)
             
