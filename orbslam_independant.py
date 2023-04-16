@@ -70,9 +70,12 @@ def run_orbslam(vocab_path, settings_path):
     last_time = cur_time
     while time.time() < (start_time+180):
         cur_time = time.time()
+        timestamp = cur_time-start_time
         ret_val, frame = video_capture.read()
         if not ret_val:
             continue
+        
+        cv2.imwrite(prefix+"slam_image_" + timestamp, frame)
 
         t1 = time.time()
         slam.process_image_mono(frame, t1)
@@ -85,9 +88,9 @@ def run_orbslam(vocab_path, settings_path):
         pos_a0_delta = pos_a0_cur-pos_a0_prev
         pos_a1_delta = pos_a1_cur-pos_a1_prev
         x, y, theta = update_position(x, y, theta, pos_a0_delta, pos_a1_delta, W)
-        xs_ego.append(x)
-        ys_ego.append(y)
-        thetas_ego.append(theta)
+        xs_ego.append([x, timestamp])
+        ys_ego.append([y, timestamp])
+        thetas_ego.append([theta, timestamp])
         
         np.save(prefix+"ego_xs.npy", xs_ego)
         np.save(prefix+"ego_ys.npy", ys_ego)
