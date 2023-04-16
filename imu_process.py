@@ -3,15 +3,15 @@ import time
 
 def start_imu(IMU85_dict, IMU55_dict, imu_setup_done, termination_event):
 
-    print("setting up IMU's in imu_process.py")
+    print("------ IMU SETUP PROCESS STARTING -------")
     IMU1 = IMU.IMU_BNO085()
     IMU1.setupIMU()
 
     IMU2 = IMU.IMU_BNO055(0, 40)
     IMU2.restoreCalibrationConstants([0, 0, 85, 0, 1, 0, 166, 1, 77, 1, 176, 1, 1, 0, 0, 0, 0, 0, 232, 3, 178, 1]) #only for bno55
     IMU2.setupIMU()
-    print("IMU setups done")
     imu_setup_done.set() 
+    print("------ IMU SETUP PROCESS COMPLETED -------")
     
     
     pitch_angle1_init, yaw_angle1_init = IMU1.getAngles()

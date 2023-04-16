@@ -6,5 +6,7 @@ venv/git
 */Vocabulary/
 /maps2d/*
 /orbslam_independant_files/*
+*.png
+*.txt
 
 ORBvoc.txt

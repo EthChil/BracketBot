@@ -5,6 +5,7 @@ from odriveDriver import Axis
 
 def setup_odrive(odrive_setup_done):
     # ODRIVE SETUP
+    print("------ ODRIVE SETUP PROCESS STARTING -------")
     odrv0 = odrive.find_any()
     a0 = Axis(odrv0.axis0, dir=1)
     a1 = Axis(odrv0.axis1, dir=-1)
@@ -12,3 +13,4 @@ def setup_odrive(odrive_setup_done):
     a1.setup()
     
     odrive_setup_done.set()
+    print("------ ODRIVE SETUP PROCESS COMPLETED -------")

@@ -43,14 +43,14 @@ def logger(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, ego_
     Cl_commands = []
     Cr_commands = []
     
-    Cl_commands_modded = []
-    Cr_commands_modded = []
+    left_encoder = []
+    right_encoder = []
     
     while not termination_event.is_set():
         
         cur_time = time.time()-start_time
         dt = cur_time - prev_time
-        
+                
         pitch_angle85 = imu85_dict.get("pitch_angle", 0)
         yaw_angle85 = imu85_dict.get("yaw_angle", 0)
         pitch_rate85 = imu85_dict.get("pitch_rate", 0)
@@ -61,8 +61,8 @@ def logger(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, ego_
         pitch_rate55 = imu55_dict.get("pitch_rate", 0)
         yaw_rate55 = imu55_dict.get("yaw_rate", 0)
         
-        egos = ego_estimation.get("ego", (0, 0, 0))
-        drives = drive_stats.get("stats", (0, 0, 0, 0, 0, 0))
+        egos = ego_estimation.get("ego", (0, 0, 0, 0, 0))
+        drives = drive_stats.get("stats", (0, 0, 0, 0))
         
         setpoint = set_points.get("setpoints", [0,0,0,0,0,0])
         
@@ -75,12 +75,14 @@ def logger(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, ego_
         vs_lqr.append(drives[1])
         Cl_commands.append(drives[2])
         Cr_commands.append(drives[3])
-        Cl_commands_modded.append(drives[4])
-        Cr_commands_modded.append(drives[5])
         
         xs_ego.append(egos[0])
         ys_ego.append(egos[1])
         thetas_ego.append(-egos[2])
+        
+        left_encoder.append(egos[3])
+        right_encoder.append(egos[4])
+        
         
         pitchAngles85.append(pitch_angle85)
         yawAngles85.append(yaw_angle85)
@@ -101,7 +103,7 @@ def logger(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, ego_
         
     print("Saving Logs and Plots")
     
-    fig, axs = plt.subplots(nrows=8, ncols=1, figsize=(8, 16))
+    fig, axs = plt.subplots(nrows=9, ncols=1, figsize=(8, 16))
 
     # Plot 1
     axs[0].plot(times, dts, label='dts')
@@ -151,10 +153,14 @@ def logger(mode, imu_setup_done, odrive_setup_done, imu85_dict, imu55_dict, ego_
 
     axs[7].plot(times, Cl_commands, label='torque right')
     axs[7].plot(times, Cr_commands, label='torque left')
-    axs[7].plot(times, Cr_commands_modded, label='torque right modded')
-    axs[7].plot(times, Cl_commands_modded, label='torque left modded')
     axs[7].legend()
     axs[7].set_title("Balance Torques")
+    
+    axs[8].plot(times, left_encoder, label='encoder right')
+    axs[8].plot(times, right_encoder, label='enocder left')
+    axs[8].legend()
+    axs[8].set_title("encoder values")
+    
 
 
     plt.tight_layout()
