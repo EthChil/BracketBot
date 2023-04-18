@@ -1,6 +1,5 @@
+import moteusDriver
 
-import odrive
-from odrive.enums import *
 import time
 import matplotlib.pyplot as plt
 import numpy as np
@@ -20,7 +19,11 @@ IMU1.setupIMU()
 # IMU2.restoreCalibrationConstants([0, 0, 85, 0, 1, 0, 166, 1, 77, 1, 176, 1, 1, 0, 0, 0, 0, 0, 232, 3, 178, 1]) #only for bno55
 # IMU2.setupIMU()
 
-odrv0 = odrive.find_any()
+moteus1 = moteusDriver.MoteusController(device_id=1)
+moteus1.stop()
+
+moteus2 = moteusDriver.MoteusController(device_id=2)
+moteus2.stop()
 
 
 ref_time = time.time()
@@ -37,17 +40,12 @@ K = np.array([[-4.08, -8.11, -52.57, -25.27, -0.00, 0.00],[0.00, 0.00, 0.00, 0.0
 
 W = 0.567   # Distance between wheels in meters
 
-a0 = Axis(odrv0.axis0, dir=1)
-a1 = Axis(odrv0.axis1, dir=-1)
 
-a0.setup()
-a1.setup()
+pos_init_a0 = moteus1.get_position() * t2m
+pos_init_a1 = moteus2.get_position() * t2m
 
-pos_init_a0 = a0.get_pos_turns() * t2m
-pos_init_a1 = a1.get_pos_turns() * t2m
-
-pos_a0_cur = a0.get_pos_turns() * t2m - pos_init_a0
-pos_a1_cur = a1.get_pos_turns() * t2m - pos_init_a1
+pos_a0_cur = moteus1.get_position() * t2m - pos_init_a0
+pos_a1_cur = moteus2.get_position() * t2m - pos_init_a1
 pos_a0_prev = pos_a0_cur
 pos_a1_prev = pos_a1_cur
 
@@ -73,11 +71,10 @@ def update_position(x, y, theta, d_left, d_right, W):
     return x, y, theta
 
 
-
 def LQR(axis0, axis1):
     # read initial values to offset
-    x_init = (axis0.get_pos_turns() * t2m + axis1.get_pos_turns() * t2m)/2
-    pos_init = (axis0.get_pos_turns() * t2m + axis1.get_pos_turns() * t2m)/2
+    x_init = (moteus1.get_position() * t2m + moteus2.get_position() * t2m)/2
+    pos_init = (moteus1.get_position() * t2m + moteus2.get_position() * t2m)/2
     
 
     pitch_angle1=IMU1.getPitchAngle() 
@@ -120,39 +117,36 @@ def LQR(axis0, axis1):
         cur_time = time.time() - start_time # relative time starts at 0
         dt = cur_time - prev_time
         
-        a0_pos_cts = axis0.get_pos_cts()
-        a1_pos_cts = axis1.get_pos_cts()
-        a0_vel_cts = axis0.get_vel_cts()
-        a1_vel_cts = axis1.get_vel_cts()
-        a0_trq_input = axis0.get_torque_input()
+        a0_pos_turns = moteus1.get_position()
+        a1_pos_turns = moteus2.get_position()
+        
+        a0_vel_turns = moteus1.get_velocity()
+        a1_vel_turns = moteus2.get_velocity()
+        # a0_trq_input = axis0.get_torque_input()
         
         #stop the program if the torque or vel gets super high
-        if abs(a0_trq_input) > 12:
-            print("torque too high: ",axis0.get_torque_input(),"Nm")
-            break
-        if abs(a0_vel_cts*c2m) > 4:
-            print("velocity too high: ",axis0.get_vel(),"turns/s")
-            break
+        # if abs(a0_trq_input) > 12:
+        #     print("torque too high: ",axis0.get_torque_input(),"Nm")
+        #     break
+        # if abs(a0_vel_cts*c2m) > 4:
+        #     print("velocity too high: ",axis0.get_vel(),"turns/s")
+        #     break
         
         
         # EGO MOTION
-        pos_a0_cur = a0_pos_cts * c2m - pos_init_a0
-        pos_a1_cur = a1_pos_cts * c2m - pos_init_a1
+        pos_a0_cur = a0_pos_turns * t2m - pos_init_a0
+        pos_a1_cur = a1_pos_turns * t2m - pos_init_a1
         
         global pos_a0_prev, pos_a1_prev, x_ego, y, theta
         
         pos_a0_delta = pos_a0_cur-pos_a0_prev
         pos_a1_delta = pos_a1_cur-pos_a1_prev
-
-        
-        
         # END EGO
         
         Xf = np.array([0, 0, 0, 0, 0, 0])
 
-        x = (a0_pos_cts * c2m  + a1_pos_cts * c2m)/2 - pos_init
-        v = (a0_vel_cts * c2m + a1_vel_cts * c2m)/2
-
+        x = (a0_pos_turns * t2m  + a1_pos_turns * t2m)/2 - pos_init
+        v = (a0_vel_turns * t2m + a1_vel_turns * t2m)/2
 
 
         yaw_angle2 =0
@@ -173,52 +167,16 @@ def LQR(axis0, axis1):
         thetas_ego.append(theta)
         thetas_fused.append(theta_fused)
         
-        
-        
-
         X = np.array([x, v, -pitch_angle1, pitch_rate1, -yaw_angle1-start_angle, -yaw_rate1])
-
-        # U = -K @ (X - Xf)
-
         D = np.array([[0.5, 0.5],[0.5, -0.5]])
-        # print("K mat: ", K)
-        # print("X mat: ", X)
-        # print("Xf mat: ", Xf)
-        # print("D mat:", D)
+
         Cl, Cr = D @ (-K @ (X - Xf))
-        # print("Cl: ", Cl)
-        # print("Cr: ", Cr)
-        
 
-
-        vel_scope = 20 #counts/s
-        mult_a0 = max((vel_scope - abs(a0_vel_cts))/vel_scope, 1) if a0_vel_cts<vel_scope else 0
-        mult_a1 = max((vel_scope - abs(a1_vel_cts))/vel_scope, 1) if a1_vel_cts<vel_scope else 0
-        
-        Cl_modded = Cl
-        Cr_modded = Cr
-
-        if Cl > 0:
-            Cl_modded = Cl + 0.15*mult_a0
-            
-        else:
-            Cl_modded = Cl - 0.15*mult_a0
-            
-        if Cr > 0:
-            Cr_modded = Cr + 0.15*mult_a1
-        else:
-            Cr_modded = Cr - 0.15*mult_a1
             
         # Apply the filtered torque values to the axes
-        axis0.set_trq(Cl)
-        axis1.set_trq(Cr)
+        moteus1.set_torque(Cl)
+        moteus2.set_torque(Cr)
             
-
-        # axis0.set_trq(Cl_modded)
-        # axis1.set_trq(Cr_modded)
-        
-        
-        
 
         times.append(cur_time)
         dts.append(dt)
@@ -242,7 +200,8 @@ def LQR(axis0, axis1):
         pos_a1_prev = pos_a1_cur
         prev_time = cur_time
 
-    brake_both_motors(a0, a1)
+    moteus1.stop()
+    moteus2.stop()
 
     fig, axs = plt.subplots(nrows=8, ncols=1, figsize=(8, 16))
 

@@ -82,8 +82,8 @@ def run_orbslam(vocab_path, settings_path):
         t1 = time.time()
         slam.process_image_mono(frame, t1)
     
-        mps = np.array(slam.get_tracked_mappoints())
-        kps = np.array(slam.get_tracked_keypoints())
+        # mps = np.array(slam.get_tracked_mappoints())
+        # kps = np.array(slam.get_tracked_keypoints())
         
         pos_a0_cur = axis0.get_pos_turns() * t2m - pos_init_a0
         pos_a1_cur = axis1.get_pos_turns() * t2m - pos_init_a1
@@ -101,40 +101,40 @@ def run_orbslam(vocab_path, settings_path):
         pos_a0_prev = pos_a0_cur
         pos_a1_prev = pos_a1_cur
 
-        if last_time < (cur_time+60) and cur_time>(start_time+300): #only run this every 10 seconds
-            if mps.size > 0 and kps.size > 0:
-                # floor_inds = get_floor_points_kps(kps)
-                floor_inds = get_floor_points_mps(mps)
-                slam.set_floor_mappoints(floor_inds.tolist())
+        # if last_time < (cur_time+60) and cur_time>(start_time+300): #only run this every 10 seconds
+        #     if mps.size > 0 and kps.size > 0:
+        #         # floor_inds = get_floor_points_kps(kps)
+        #         floor_inds = get_floor_points_mps(mps)
+        #         slam.set_floor_mappoints(floor_inds.tolist())
 
-                K = slam.get_intrinsics_matrix()
-                Rt = slam.get_extrinsics_matrix()
-                Rts = np.concatenate([Rts, Rt[np.newaxis]], axis=0) if Rts is not None else Rt[np.newaxis]
+        #         K = slam.get_intrinsics_matrix()
+        #         Rt = slam.get_extrinsics_matrix()
+        #         Rts = np.concatenate([Rts, Rt[np.newaxis]], axis=0) if Rts is not None else Rt[np.newaxis]
                 
-                # Fit ground plane
-                floor_mps = np.array(slam.get_floor_mappoints())
-                plane_coefs = fit_plane_model(floor_mps)
-                slam.set_ground_plane_params(*plane_coefs)
+        #         # Fit ground plane
+        #         floor_mps = np.array(slam.get_floor_mappoints())
+        #         plane_coefs = fit_plane_model(floor_mps)
+        #         slam.set_ground_plane_params(*plane_coefs)
 
-                # Project floor contours
-                floor_contours = get_floor_contours(frame)
-                for contour in floor_contours:
-                    pts3d = uv_to_plane3d(contour, K, Rt, plane_coefs)
-                    # print("***********************************")
-                    # for pt, mp in zip(pts3d, mps[floor_inds]):
-                    #     print(pt, mp)
-                    # print("***********************************")
-                    # self.slam.add_floor_contour(pts3d)
-                    pts2d = plane3d_to_2d(pts3d, plane_coefs)
-                    driveable_area.append(pts2d)
-                np.save(prefix+'driveable_area.npy', np.stack(driveable_area))
+        #         # Project floor contours
+        #         floor_contours = get_floor_contours(frame)
+        #         for contour in floor_contours:
+        #             pts3d = uv_to_plane3d(contour, K, Rt, plane_coefs)
+        #             # print("***********************************")
+        #             # for pt, mp in zip(pts3d, mps[floor_inds]):
+        #             #     print(pt, mp)
+        #             # print("***********************************")
+        #             # self.slam.add_floor_contour(pts3d)
+        #             pts2d = plane3d_to_2d(pts3d, plane_coefs)
+        #             driveable_area.append(pts2d)
+        #         np.save(prefix+'driveable_area.npy', np.stack(driveable_area))
 
-                # Project camera path
-                camera_path = project_on_plane(Rts[:,:,3], plane_coefs)
-                camera_path = plane3d_to_2d(camera_path, plane_coefs)
-                np.save(prefix+'camera_path.npy', camera_path)
+        #         # Project camera path
+        #         camera_path = project_on_plane(Rts[:,:,3], plane_coefs)
+        #         camera_path = plane3d_to_2d(camera_path, plane_coefs)
+        #         np.save(prefix+'camera_path.npy', camera_path)
                 
-                last_time = cur_time
+        #         last_time = cur_time
             
             
 
