@@ -6,7 +6,6 @@ import numpy as np
 import IMU
 import math
 
-from odriveDriver import Axis
 plt.switch_backend('Agg')
 
 plot_dir = './plots/'
@@ -19,10 +18,10 @@ IMU1.setupIMU()
 # IMU2.restoreCalibrationConstants([0, 0, 85, 0, 1, 0, 166, 1, 77, 1, 176, 1, 1, 0, 0, 0, 0, 0, 232, 3, 178, 1]) #only for bno55
 # IMU2.setupIMU()
 
-moteus1 = moteusDriver.MoteusController(device_id=1)
+moteus1 = moteusDriver.MoteusController(device_id=1, direction=1)
 moteus1.stop()
 
-moteus2 = moteusDriver.MoteusController(device_id=2)
+moteus2 = moteusDriver.MoteusController(device_id=2, direction=1)
 moteus2.stop()
 
 
@@ -110,6 +109,9 @@ def LQR(axis0, axis1):
 
     Cl_commands = []
     Cr_commands = []
+    
+    moteus1.stop()
+    moteus2.stop()
     
     while cur_time < 30:
         # time.sleep(0.0001)
