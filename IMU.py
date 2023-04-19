@@ -116,7 +116,7 @@ class IMU_BNO085:
         if(not self.setup):
             print("ERROR IMU has not been initialized")
             return None
-        adjust = -math.radians(0.48116174673115375)
+        adjust = -math.radians(-0.79)
         
         (q_i, q_j, q_k, q_real) = self.bno.quaternion
         (roll, pitch, yaw) = self.euler_from_quaternion(q_i, q_j, q_k, q_real)
@@ -131,8 +131,9 @@ class IMU_BNO085:
 
         self.prev_angle = norm
         continuous_angle = norm + 2*math.pi*self.wraps
+        
 
-        return [self.getGravityVector()[1] - adjust, continuous_angle]
+        return [pitch - adjust, continuous_angle]
         
         
     def getRates(self):
@@ -142,7 +143,8 @@ class IMU_BNO085:
             print("ERROR IMU has not been initialized UN SMART INDIVIDUAL")
             return None
 
-        (gyro_x, gyro_y, gyro_z) = self.bno.gyro
+        # (gyro_x, gyro_y, gyro_z) = self.bno.gyro
+        
 
         (gyro_x, gyro_y, gyro_z) = self.bno.gyro
 

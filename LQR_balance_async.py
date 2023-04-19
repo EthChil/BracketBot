@@ -1,10 +1,11 @@
-import moteusDriver
-
 import time
 import matplotlib.pyplot as plt
 import numpy as np
 import IMU
 import math
+
+import asyncio
+import moteus
 
 plt.switch_backend('Agg')
 
@@ -14,70 +15,52 @@ IMU1 = IMU.IMU_BNO085()
 # IMU.restoreCalibrationConstants([0, 0, 85, 0, 1, 0, 166, 1, 77, 1, 176, 1, 1, 0, 0, 0, 0, 0, 232, 3, 178, 1]) only for bno55
 IMU1.setupIMU()
 
-IMU2 = IMU.IMU_BNO055(0, 40)
-IMU2.restoreCalibrationConstants([0, 0, 85, 0, 1, 0, 166, 1, 77, 1, 176, 1, 1, 0, 0, 0, 0, 0, 232, 3, 178, 1]) #only for bno55
-IMU2.setupIMU()
-
-
-moteus1 = moteusDriver.MoteusController(device_id=1, direction=1)
-moteus1.stop()
-
-moteus2 = moteusDriver.MoteusController(device_id=2, direction=1)
-moteus2.stop()
-
-
-ref_time = time.time()
-t2m = 0.528 #turns to meters
-c2m = t2m/8192
-
-
-
-#Q = diag([50 30 0.1 0.01 10 1]); % 'x', 'v', 'θ', 'ω', 'δ', "δ'
-#R = diag([3 3]); % Torque cost Cθ,Cδ
-K = np.array([[-4.08, -8.11, -52.57, -25.27, -0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 1.83, 1.77]]  )
-
-
-W = 0.567   # Distance between wheels in meters
-
-
-pos_init_a0 = moteus1.get_position() * t2m
-pos_init_a1 = moteus2.get_position() * t2m
-
-pos_a0_cur = moteus1.get_position() * t2m - pos_init_a0
-pos_a1_cur = moteus2.get_position() * t2m - pos_init_a1
-pos_a0_prev = pos_a0_cur
-pos_a1_prev = pos_a1_cur
-
-xs_ego = []
-ys_ego = []
-thetas_ego = []
-thetas_fused = []
-
-x_ego, y, theta = 0, 0, 0 # Initial position and heading
-
-
 def update_position(x, y, theta, d_left, d_right, W):
-    distance_left = d_left
-    distance_right = d_right
+        distance_left = d_left
+        distance_right = d_right
 
-    distance_avg = (distance_left + distance_right) / 2
-    delta_theta = (distance_right - distance_left) / W
+        distance_avg = (distance_left + distance_right) / 2
+        delta_theta = (distance_right - distance_left) / W
 
-    x += distance_avg * math.cos(theta + delta_theta / 2)
-    y += distance_avg * math.sin(theta + delta_theta / 2)
-    theta += delta_theta
+        x += distance_avg * math.cos(theta + delta_theta / 2)
+        y += distance_avg * math.sin(theta + delta_theta / 2)
+        theta += delta_theta
 
-    return x, y, theta
+        return x, y, theta
 
+async def main():
 
-def LQR(moteus1, moteus2):
-    # read initial values to offset
-    x_init = (moteus1.get_position() * t2m + moteus2.get_position() * t2m)/2
-    pos_init = (moteus1.get_position() * t2m + moteus2.get_position() * t2m)/2
+    fdcanusb = moteus.Fdcanusb(debug_log='fdcanusb_debug.log')
+    moteus1 = moteus.Controller(id=1, transport=fdcanusb)
+    moteus2 = moteus.Controller(id=2, transport=fdcanusb)
+
+    m1state = await moteus1.set_stop(query=True)
+    m2state = await moteus2.set_stop(query=True)
+
+    t2m = 0.528 #turns to meters
+    W = 0.567   # Distance between wheels in meters
     
+    K = np.array([[-4.08, -8.11, -52.57, -25.27, -0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 1.83, 1.77]]  )
+
+    pos_init_a0 = m1state.values[moteus.Register.POSITION] * t2m
+    pos_init_a1 = m2state.values[moteus.Register.POSITION] * t2m
+    pos_init = (pos_init_a0 + pos_init_a1)/2
     print(pos_init)
     
 
+    pos_a0_cur = 0
+    pos_a1_cur = 0
+    pos_a0_prev = 0
+    pos_a1_prev = 0
+
+    xs_ego = []
+    ys_ego = []
+    thetas_ego = []
+    thetas_fused = []
+
+    x_ego, y, theta = 0, 0, 0 # Initial position and heading
+
+    
     pitch_angle1=IMU1.getPitchAngle() 
     yaw_angle1=IMU1.getYawAngle()
     pitch_rate1=IMU1.getPitchRate()
@@ -112,29 +95,19 @@ def LQR(moteus1, moteus2):
     Cl_commands = []
     Cr_commands = []
     
-    moteus1.stop()
-    moteus2.stop()
+    m1state = await moteus1.set_stop(query=True)
+    m2state = await moteus2.set_stop(query=True)
     
     while cur_time < 5:
-        # time.sleep(0.0001)
         
         cur_time = time.time() - start_time # relative time starts at 0
         dt = cur_time - prev_time
         
-        a0_pos_turns = moteus1.get_position()
-        a1_pos_turns = moteus2.get_position()
+        a0_pos_turns = m1state.values[moteus.Register.POSITION]
+        a1_pos_turns = m2state.values[moteus.Register.POSITION]
         
-        a0_vel_turns = moteus1.get_velocity()
-        a1_vel_turns = moteus2.get_velocity()
-        # a0_trq_input = axis0.get_torque_input()
-        
-        #stop the program if the torque or vel gets super high
-        # if abs(a0_trq_input) > 12:
-        #     print("torque too high: ",axis0.get_torque_input(),"Nm")
-        #     break
-        # if abs(a0_vel_cts*c2m) > 4:
-        #     print("velocity too high: ",axis0.get_vel(),"turns/s")
-        #     break
+        a0_vel_turns = m1state.values[moteus.Register.VELOCITY]
+        a1_vel_turns = m2state.values[moteus.Register.VELOCITY]
         
         
         # EGO MOTION
@@ -142,20 +115,21 @@ def LQR(moteus1, moteus2):
         pos_a1_cur = a1_pos_turns * t2m - pos_init_a1
         
         print(pos_a0_cur, pos_a1_cur)
-        
-        
-        global pos_a0_prev, pos_a1_prev, x_ego, y, theta
-        
+    
         pos_a0_delta = pos_a0_cur-pos_a0_prev
         pos_a1_delta = pos_a1_cur-pos_a1_prev
         # END EGO
         
         Xf = np.array([0, 0, 0, 0, 0, 0])
-
         x = (a0_pos_turns * t2m  + a1_pos_turns * t2m)/2 - pos_init
         v = (a0_vel_turns * t2m + a1_vel_turns * t2m)/2
 
 
+        yaw_angle1 =0
+        pitch_angle1 = 0
+        pitch_rate1 = 0
+        yaw_rate1 =0
+        
         yaw_angle2 =0
         pitch_angle2 = 0
         pitch_rate2 = 0
@@ -185,18 +159,8 @@ def LQR(moteus1, moteus2):
 
         Cl, Cr = D @ (-K @ (X - Xf))
         
-        # moteus1.set_torque(Cr)
-        # moteus2.set_torque(Cl)
-            
-        # Apply the filtered torque values to the axes
-        
-        # moteus1.set_torque(Cr)
-        # moteus2.set_torque(Cl)
-        
-        
-        # print(Cl)
-        # print(Cr)
-            
+        m1state = await moteus1.set_position(position=math.nan, velocity=0.0, accel_limit=0.0, feedforward_torque=Cl, kp_scale=0, kd_scale=0, maximum_torque=1, query=True)
+        m2state = await moteus2.set_position(position=math.nan, velocity=0.0, accel_limit=0.0, feedforward_torque=Cr, kp_scale=0, kd_scale=0, maximum_torque=1, query=True)
 
         times.append(cur_time)
         dts.append(dt)
@@ -219,9 +183,11 @@ def LQR(moteus1, moteus2):
         pos_a0_prev = pos_a0_cur
         pos_a1_prev = pos_a1_cur
         prev_time = cur_time
+        
+        # await asyncio.sleep(0)
 
-    moteus1.stop()
-    moteus2.stop()
+    m1state = await moteus1.set_stop(query=True)
+    m2state = await moteus2.set_stop(query=True)
 
     fig, axs = plt.subplots(nrows=8, ncols=1, figsize=(100, 50))
 
@@ -286,7 +252,6 @@ def LQR(moteus1, moteus2):
     plt.clf()
 
 
-
-
-LQR(moteus1, moteus2)
+if __name__ == '__main__':
+    asyncio.run(main())
 
