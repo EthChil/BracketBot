@@ -22,7 +22,7 @@ def update_position(x, y, theta, d_left, d_right, W):
         return x, y, theta
 
 async def control_main(termination_event, imu_and_odometry_dict):
-    fdcanusb = moteus.Fdcanusb(debug_log='fdcanusb_debug.log')
+    fdcanusb = moteus.Fdcanusb(debug_log='./MASTER_LOGS/fdcanusb_debug.log')
     moteus1 = moteus.Controller(id=1, transport=fdcanusb)
     moteus2 = moteus.Controller(id=2, transport=fdcanusb)
 
@@ -126,74 +126,6 @@ async def control_main(termination_event, imu_and_odometry_dict):
 
     m1state = await moteus1.set_stop(query=True)
     m2state = await moteus2.set_stop(query=True)
-
-    # fig, axs = plt.subplots(nrows=8, ncols=1, figsize=(100, 50))
-
-    # # Plot 1
-    # axs[0].plot(times, dts, label='dts')
-    # axs[0].legend()
-    # axs[0].set_title("dts")
-
-    # # Plot 2
-    # axs[1].plot(times, xs, label='xs')
-    # axs[1].legend()
-    # axs[1].set_title("xs")
-
-    # # Plot 3
-    # axs[2].plot(times, vs, label='vs')
-    # # axs[2].plot(times, ewa2, label='ewa')
-    # axs[2].legend()
-    # axs[2].set_title("vs")
-
-    # # Plot 5
-    # axs[3].plot(times, pitchAngles1, label='Pitch Angles 85')
-    # axs[3].plot(times, pitchAngles2, label='Pitch Angles 55')
-    # axs[3].legend()
-    # axs[3].set_title("Pitch Angles")
-
-    # # Plot 6
-    # axs[4].plot(times, pitchRates1, label='pitch rates 85')
-    # axs[4].plot(times, pitchRates2, label='pitch rates 55')
-    # # axs[4].plot(times, ewa1, label='pitewa')
-    # axs[4].legend()
-    # axs[4].set_title("pitch rates")
-
-    # # Plot 7
-    # axs[5].plot(times, yawAngles1, label='Yaw Angles 85')
-    # axs[5].plot(times, yawAngles2, label='Yaw Angles 55')
-    # axs[5].plot(times, thetas_ego, label='Yaw Angle ego')
-    # axs[5].plot(times, thetas_fused, label='Yaw Angle Fused 55 Ego')
-    # axs[5].legend()
-    # axs[5].set_title("Yaw Angles")
-
-    # # Plot 7
-    # axs[6].plot(times, yawRates1, label='Yaw Rates 85')
-    # axs[6].plot(times, yawRates2, label='Yaw Rates 55')
-    # axs[6].legend()
-    # axs[6].set_title("Yaw Rates")
-
-    # axs[7].plot(times, Cl_commands, label='torque left')
-    # axs[7].plot(times, Cr_commands, label='torque right')
-    # axs[7].plot(times, Cl_actual, label='moteus torque left ')
-    # axs[7].plot(times, Cr_actual, label='moteus torque right')
-    # axs[7].legend()
-    # axs[7].set_title("Balance Torques")
-
-
-    # plt.tight_layout()
-    # plt.savefig(plot_dir+ "balance_plots.png")
-    # plt.clf()
-    
-    # fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(8, 16))
-
-    # # Plot 1
-    # axs.plot(ys_ego, xs_ego, label='ego')
-    # axs.set_title("dts")
-    # plt.tight_layout()
-    # plt.savefig(plot_dir+ "ego.png")
-    # plt.clf()
-
-
 
 def run_moteus(termination_event, imu_setup, imu85_dict):
     imu_setup.wait() 
