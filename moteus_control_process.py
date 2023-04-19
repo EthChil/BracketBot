@@ -32,7 +32,7 @@ async def control_main(termination_event, imu_and_odometry_dict, input_dict):
 
     t2m = 0.528 #turns to meters
     W = 0.567   # Distance between wheels in meters
-    max_torque_delta = 0.4
+    max_torque_delta = 0.5
     
     
     #KEYBOARD CONTROL
@@ -72,7 +72,7 @@ async def control_main(termination_event, imu_and_odometry_dict, input_dict):
     m1state = await moteus1.set_stop(query=True)
     m2state = await moteus2.set_stop(query=True)
 
-    while cur_time < 0 and not termination_event.is_set():        
+    while cur_time < 600 and not termination_event.is_set():        
         cur_time = time.time() - start_time
         dt = cur_time - prev_time
         
@@ -115,7 +115,6 @@ async def control_main(termination_event, imu_and_odometry_dict, input_dict):
             yaw_stable = -yaw_angle85
             Xf_selected = np.array([combined_current_position, -0.25, -0.005, 0, -yaw_angle85, 0])
             K_selected = K_forward_backward
-
             
         elif input_dict.get("key", "NOPE") == "A":
             prev_dir = 0
@@ -178,8 +177,9 @@ async def control_main(termination_event, imu_and_odometry_dict, input_dict):
     m1state = await moteus1.set_stop(query=True)
     m2state = await moteus2.set_stop(query=True)
 
-def run_moteus(termination_event, imu_setup, imu85_dict, input_dict):
+def run_moteus(termination_event, imu_setup, imu85_dict, input_dict, orbslam_setup):
     imu_setup.wait() 
+    orbslam_setup.wait()
     
     asyncio.run(control_main(termination_event, imu85_dict, input_dict))
     termination_event.set()

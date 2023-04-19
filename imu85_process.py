@@ -8,7 +8,7 @@ def run_imu85_process(termination_event, imu_setup, imu_and_odometry_dict):
     IMU1.setupIMU()
     imu_setup.set()
     
-    alpha = 0.5
+    alpha = 0.4
     pitch_rate_ewa = 0
     yaw_rate_ewa = 0
     

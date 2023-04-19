@@ -12,10 +12,12 @@ from slammer import fit_plane_model, uv_to_plane3d, plane3d_to_2d, project_on_pl
 import numpy as np
 import cv2
     
-def run_orbslam(vocab_path, settings_path, termination_event):
+def run_orbslam(vocab_path, settings_path, termination_event, orbslam_setup):
     slam = orbslam2.System(vocab_path, settings_path, orbslam2.Sensor.MONOCULAR)
     slam.set_use_viewer(True)
     slam.initialize()
+    
+    orbslam_setup.set()
     
     video_capture = cv2.VideoCapture(gstreamer_pipeline(flip_method=2), cv2.CAP_GSTREAMER)
     if not video_capture.isOpened():
