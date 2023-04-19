@@ -196,13 +196,7 @@ async def control_main(termination_event, imu_and_odometry_dict):
 
 
 def run_moteus(termination_event, imu_setup, imu85_dict):
-    while not imu_setup.is_set():
-        continue
+    imu_setup.wait() 
     
     asyncio.run(control_main(termination_event, imu85_dict))
     termination_event.set()
-
-
-
-# if __name__ == '__main__':
-#     asyncio.run(main())

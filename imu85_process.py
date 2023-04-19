@@ -14,8 +14,16 @@ def run_imu85_process(termination_event, imu_setup, imu_and_odometry_dict):
     
     _, yaw_angle1 = IMU1.getAngles()
     yaw_start = yaw_angle1
+    
+    
+    start_time = time.time()
+    cur_time = 0
+    prev_time = 0
 
     while not termination_event.is_set():
+        cur_time = time.time() - start_time
+        dt = cur_time - prev_time
+        
         pitch_angle1, yaw_angle1 = IMU1.getAngles()
         pitch_rate1, yaw_rate1 = IMU1.getRates()
         
@@ -31,4 +39,8 @@ def run_imu85_process(termination_event, imu_setup, imu_and_odometry_dict):
         
         imu_and_odometry_dict['pitch_rate85_ewa'] = pitch_rate_ewa
         imu_and_odometry_dict['yaw_rate85_ewa'] = yaw_rate_ewa
+        
+        imu_and_odometry_dict['dt_imu85_process'] = dt
+        
+        prev_time = cur_time
         
