@@ -41,6 +41,8 @@ def run_logging_process(termination_event, imu_setup, imu_and_odometry_dict):
         
         cur_time = time.time()-start_time
         dt = cur_time - prev_time
+        prev_time = cur_time
+        
         times.append(cur_time)
         
         x_ego.append(imu_and_odometry_dict.get("x_ego", 0))
@@ -65,12 +67,11 @@ def run_logging_process(termination_event, imu_setup, imu_and_odometry_dict):
         dt_logging_process.append(dt)
         
         
-        prev_time = cur_time
-        time.sleep(0.0001)
+        time.sleep(0.001)
         
     print("Saving Logs and Plots")
     
-    fig, axs = plt.subplots(nrows=8, ncols=1, figsize=(20, 10))
+    fig, axs = plt.subplots(nrows=8, ncols=1, figsize=(40, 30))
 
     # Plot 1
     axs[0].plot(times, dt_logging_process, label='logging process')

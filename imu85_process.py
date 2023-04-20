@@ -1,4 +1,3 @@
-import asyncio
 import IMU
 import time
 
@@ -8,7 +7,7 @@ def run_imu85_process(termination_event, imu_setup, imu_and_odometry_dict):
     IMU1.setupIMU()
     imu_setup.set()
     
-    alpha = 0.4
+    alpha = 0.6
     pitch_rate_ewa = 0
     yaw_rate_ewa = 0
     
@@ -23,6 +22,7 @@ def run_imu85_process(termination_event, imu_setup, imu_and_odometry_dict):
     while not termination_event.is_set():
         cur_time = time.time() - start_time
         dt = cur_time - prev_time
+        prev_time = cur_time
         
         pitch_angle1, yaw_angle1 = IMU1.getAngles()
         pitch_rate1, yaw_rate1 = IMU1.getRates()
@@ -41,6 +41,4 @@ def run_imu85_process(termination_event, imu_setup, imu_and_odometry_dict):
         imu_and_odometry_dict['yaw_rate85_ewa'] = yaw_rate_ewa
         
         imu_and_odometry_dict['dt_imu85_process'] = dt
-        
-        prev_time = cur_time
         
