@@ -21,22 +21,8 @@ def update_position(x, y, theta, d_left, d_right, W):
 
         return x, y, theta
     
-class ControllerData:
-    def __init__(self):
-        self.x_ego = 0
-        self.y_ego = 0
-        self.theta_ego = 0
-        self.moteus1_current_position = 0
-        self.moteus2_current_position = 0
-        self.moteus1_current_velocity = 0
-        self.moteus2_current_velocity = 0
-        self.moteus1_torque_reading = 0
-        self.moteus2_torque_reading = 0
-        self.moteus1_torque_command = 0
-        self.moteus2_torque_command = 0
-        self.dt_moteus_control = 0
 
-async def control_main(termination_event, imu_reader_controller, controller_write_to_logger, input_value):
+async def control_main(termination_event, input_value, imu_shared_array, odometry_shared_array,):
     fdcanusb = moteus.Fdcanusb(debug_log='./MASTER_LOGS/fdcanusb_debug.log')
     moteus1 = moteus.Controller(id=1, transport=fdcanusb)
     moteus2 = moteus.Controller(id=2, transport=fdcanusb)
@@ -69,13 +55,13 @@ async def control_main(termination_event, imu_reader_controller, controller_writ
     moteus2_previous_torque_command = 0
     x_ego, y_ego, theta_ego = 0, 0, 0
     
+    with imu_shared_array.get_lock():
+        imu_data = imu_shared_array[:]
     
-    imu_data = imu_reader_controller.recv()
-    
-    pitch_angle85    = imu_data.pitch_angle85
-    yaw_angle85      = imu_data.yaw_angle85
-    pitch_rate85 = imu_data.pitch_rate85
-    yaw_rate85   = imu_data.yaw_rate85
+    pitch_angle85    = imu_data[0]
+    yaw_angle85      = imu_data[1]
+    pitch_rate85 = imu_data[2]
+    yaw_rate85   = imu_data[3]
     
     # FOR KEYBOARD CONTROL
     x_stable = 0
@@ -113,16 +99,13 @@ async def control_main(termination_event, imu_reader_controller, controller_writ
         combined_current_position = (moteus1_current_position + moteus2_current_position)/2
         combined_current_velocity = (moteus1_current_velocity + moteus2_current_velocity)/2
         
-        most_recent_data = None
-        while imu_reader_controller.poll() and not termination_event.is_set():
-            most_recent_data = imu_reader_controller.recv()
-
-        if most_recent_data is not None:
-            pitch_angle85    = most_recent_data.pitch_angle85
-            yaw_angle85      = most_recent_data.yaw_angle85
-            pitch_rate85 = most_recent_data.pitch_rate85
-            yaw_rate85   = most_recent_data.yaw_rate85
-            
+        with imu_shared_array.get_lock():
+            imu_data = imu_shared_array[:]
+    
+        pitch_angle85    = imu_data[0]
+        yaw_angle85      = imu_data[1]
+        pitch_rate85 = imu_data[2]
+        yaw_rate85   = imu_data[3]
                     
         x_ego, y_ego, theta_ego = update_position(x_ego, y_ego, theta_ego, moteus1_delta_position, moteus2_delta_position, W)
         
@@ -138,7 +121,7 @@ async def control_main(termination_event, imu_reader_controller, controller_writ
             prev_dir = 1
             x_stable = combined_current_position
             yaw_stable = -yaw_angle85
-            Xf_selected = np.array([combined_current_position, 0.25, 0.01, 0, yaw_stable, 0])
+            Xf_selected = np.array([combined_current_position, 0.3, 0.02, 0, yaw_stable, 0])
             K_selected = K_forward_backward
             
         elif input_value.value == 2:
@@ -146,7 +129,7 @@ async def control_main(termination_event, imu_reader_controller, controller_writ
             prev_dir = -1
             x_stable = combined_current_position
             yaw_stable = -yaw_angle85
-            Xf_selected = np.array([combined_current_position, -0.25, -0.01, 0, yaw_stable, 0])
+            Xf_selected = np.array([combined_current_position, -0.3, -0.02, 0, yaw_stable, 0])
             K_selected = K_forward_backward
             
         elif input_value.value == 3:
@@ -154,7 +137,7 @@ async def control_main(termination_event, imu_reader_controller, controller_writ
             prev_dir = 0
             x_stable = combined_current_position
             yaw_stable = -yaw_angle85
-            Xf_selected = np.array([x_stable, 0, 0.01, 0, -yaw_angle85, -1.5])
+            Xf_selected = np.array([x_stable, 0, 0, 0, -yaw_angle85, -1.5])
             K_selected = K_left_right
             
         elif input_value.value == 4:
@@ -162,7 +145,7 @@ async def control_main(termination_event, imu_reader_controller, controller_writ
             prev_dir = 0
             x_stable = combined_current_position
             yaw_stable = -yaw_angle85
-            Xf_selected = np.array([x_stable, 0, 0.01, 0, -yaw_angle85, 1.5])
+            Xf_selected = np.array([x_stable, 0, 0, 0, -yaw_angle85, 1.5])
             K_selected = K_left_right
         
         
@@ -173,7 +156,7 @@ async def control_main(termination_event, imu_reader_controller, controller_writ
             combined_current_velocity, 
             -pitch_angle85, 
             pitch_rate85, 
-            -yaw_angle85, 
+            -theta_ego, 
             -yaw_rate85 
             ])
         D = np.array([[0.5, 0.5],[0.5, -0.5]])
@@ -188,23 +171,24 @@ async def control_main(termination_event, imu_reader_controller, controller_writ
         
         # LOGGING
         
-        data = ControllerData()
+        odometry_data = []
         
-        data.x_ego = x_ego
-        data.y_ego = y_ego
-        data.theta_ego = theta_ego
-        data.moteus1_current_position = moteus1_current_position
-        data.moteus2_current_position = moteus2_current_position
-        data.moteus1_current_velocity = moteus1_current_velocity
-        data.moteus2_current_velocity = moteus2_current_velocity
-        data.moteus1_torque_reading = m1state.values[moteus.Register.TORQUE]
-        data.moteus2_torque_reading = m2state.values[moteus.Register.TORQUE]
-        data.moteus1_torque_command = Cl
-        data.moteus2_torque_command = Cr
-        data.dt_moteus_control = dt
+        odometry_data.append(x_ego)
+        odometry_data.append(y_ego)
+        odometry_data.append(theta_ego)
+        odometry_data.append(moteus1_current_position)
+        odometry_data.append(moteus2_current_position)
+        odometry_data.append(moteus1_current_velocity)
+        odometry_data.append(moteus2_current_velocity)
+        odometry_data.append(m1state.values[moteus.Register.TORQUE])
+        odometry_data.append(m2state.values[moteus.Register.TORQUE])
+        odometry_data.append(Cl)
+        odometry_data.append(Cr)
+        odometry_data.append(dt)
         
-        controller_write_to_logger.send(data)
-        
+        with odometry_shared_array.get_lock():
+            odometry_shared_array[:] = odometry_data
+            
         moteus1_previous_position = moteus1_current_position
         moteus2_previous_position = moteus2_current_position
         moteus1_previous_torque_command = Cl
@@ -217,8 +201,8 @@ async def control_main(termination_event, imu_reader_controller, controller_writ
     
     
 
-def run_moteus(termination_event, imu_setup, imu_reader_controller, controller_write_to_logger, input_value, orbslam_setup):
+def run_moteus(termination_event, imu_setup, imu_shared_array, odometry_shared_array,input_value, orbslam_setup):
     imu_setup.wait() 
     orbslam_setup.wait()
     
-    asyncio.run(control_main(termination_event, imu_reader_controller, controller_write_to_logger, input_value))
+    asyncio.run(control_main(termination_event, input_value, imu_shared_array, odometry_shared_array,))

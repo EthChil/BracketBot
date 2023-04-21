@@ -8,7 +8,7 @@ plot_dir = './MASTER_LOGS/'
 
 
 
-def run_logging_process(termination_event, imu_setup, imu_reader_logger, controller_reader_logger):
+def run_logging_process(termination_event, imu_setup, imu_shared_array, odometry_shared_array):
     imu_setup.wait() 
     
     start_time = time.time()
@@ -38,9 +38,7 @@ def run_logging_process(termination_event, imu_setup, imu_reader_logger, control
     yaw_rate85_ewa = []
     dt_imu85_process = []
     dt_logging_process = []
-    
-    imu_data = imu_reader_logger.recv()
-    controller_data = controller_reader_logger.recv()
+
     
     while not termination_event.is_set():
         
@@ -50,27 +48,30 @@ def run_logging_process(termination_event, imu_setup, imu_reader_logger, control
         
         times.append(cur_time)
         
-        imu_data = imu_reader_logger.recv()
-        controller_data = controller_reader_logger.recv()
+        with imu_shared_array.get_lock():
+            imu_data = imu_shared_array[:]
+            
+        with odometry_shared_array.get_lock():
+            odometry_data = odometry_shared_array[:]
         
-        x_ego.append(controller_data.x_ego)
-        y_ego.append(controller_data.y_ego)
-        theta_ego.append(controller_data.theta_ego)
-        moteus1_current_position.append(controller_data.moteus1_current_position)
-        moteus2_current_position.append(controller_data.moteus2_current_position)
-        moteus1_current_velocity.append(controller_data.moteus1_current_velocity)
-        moteus2_current_velocity.append(controller_data.moteus2_current_velocity)
-        moteus1_torque_reading.append(controller_data.moteus1_torque_reading)
-        moteus2_torque_reading.append(controller_data.moteus1_torque_reading)
-        moteus1_torque_command.append(controller_data.moteus1_torque_command)
-        moteus2_torque_command.append(controller_data.moteus2_torque_command)
-        dt_moteus_control.append(controller_data.dt_moteus_control)
+        x_ego.append(odometry_data[0])
+        y_ego.append(odometry_data[1])
+        theta_ego.append(odometry_data[2])
+        moteus1_current_position.append(odometry_data[3])
+        moteus2_current_position.append(odometry_data[4])
+        moteus1_current_velocity.append(odometry_data[5])
+        moteus2_current_velocity.append(odometry_data[6])
+        moteus1_torque_reading.append(odometry_data[7])
+        moteus2_torque_reading.append(odometry_data[8])
+        moteus1_torque_command.append(odometry_data[9])
+        moteus2_torque_command.append(odometry_data[10])
+        dt_moteus_control.append(odometry_data[11])
         
-        pitch_angle85.append(imu_data.pitch_angle85)
-        yaw_angle85.append(imu_data.yaw_angle85)
-        pitch_rate85.append(imu_data.pitch_rate85)
-        yaw_rate85.append(imu_data.yaw_rate85)
-        dt_imu85_process.append(imu_data.dt_imu85_process)
+        pitch_angle85.append(imu_data[0])
+        yaw_angle85.append(imu_data[1])
+        pitch_rate85.append(imu_data[2])
+        yaw_rate85.append(imu_data[3])
+        dt_imu85_process.append(imu_data[4])
         dt_logging_process.append(dt)
         
         

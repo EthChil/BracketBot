@@ -2,7 +2,7 @@
 from pynput import keyboard
 
 
-def on_key_press(key, input_value, termination_event, imu_writer_to_logger, imu_reader_logger, controller_reader_logger, controller_writer_to_logger, imu_writer_to_controller, imu_reader_controller):
+def on_key_press(key, input_value, termination_event):
     try:
         key_name = key.char.upper()
     except AttributeError:
@@ -15,12 +15,7 @@ def on_key_press(key, input_value, termination_event, imu_writer_to_logger, imu_
     elif key_name == 'Q':  # Check for the 'Q' key
         print("cancelling")
         termination_event.set()  # Set the termination_event
-        imu_writer_to_logger.close()
-        imu_reader_logger.close()
-        controller_reader_logger.close()
-        controller_writer_to_logger.close()
-        imu_writer_to_controller.close()
-        imu_reader_controller.close()
+
 
 def on_key_release(key, input_value):
     try:
@@ -31,12 +26,12 @@ def on_key_release(key, input_value):
     if key_name in ['W', 'A', 'S', 'D']:
         input_value.value = -1
 
-def keyboard_input(input_value, termination_event, imu_writer_to_logger, imu_reader_logger, controller_reader_logger, controller_writer_to_logger, imu_writer_to_controller, imu_reader_controller):
+def keyboard_input(input_value, termination_event):
     default_value = -1
     input_value.value = default_value
 
     with keyboard.Listener(
-        on_press=lambda key: on_key_press(key, input_value, termination_event, imu_writer_to_logger, imu_reader_logger, controller_reader_logger, controller_writer_to_logger, imu_writer_to_controller, imu_reader_controller),
+        on_press=lambda key: on_key_press(key, input_value, termination_event),
         on_release=lambda key: on_key_release(key, input_value)
     ) as listener:
         while not termination_event.is_set():
