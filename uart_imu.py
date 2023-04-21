@@ -46,6 +46,11 @@ serial_port.flushInput()
 initial_read(serial_port)
 # imu_setup.set()
 
+
+zero_angle_adjust = 0.00
+
+
+
 prev_time = time.time()
 buffer = ''
 try:
@@ -66,13 +71,9 @@ try:
         if start_idx != -1 and end_idx != -1:
             message = buffer[start_idx + 1:end_idx]
             values = parse_message(message)
-            print(values, dt)
+            # print(values, dt)
+            print("pitch: ", values[0] - zero_angle_adjust)
             
-            # imu_and_odometry_dict['pitch_angle85'] = values[0]
-            # imu_and_odometry_dict['yaw_angle85'] = values[1]
-            # imu_and_odometry_dict['pitch_rate85'] = values[2]
-            # imu_and_odometry_dict['yaw_rate85'] = values[3]
-            # imu_and_odometry_dict['dt_imu85_process'] = dt
 
             buffer = buffer[end_idx + 1:]
             

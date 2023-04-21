@@ -30,6 +30,8 @@ def initial_read(ser):
             print("Initial read values:", values)
             return values[1]
 
+zero_angle_adjust = 0.0 #shits mounted perfectly
+
 def run_uart_imu_process(termination_event, imu_setup, imu_shared_array):
     
     serial_port = serial.Serial(
@@ -76,7 +78,7 @@ def run_uart_imu_process(termination_event, imu_setup, imu_shared_array):
             
             imu_data = []
         
-            imu_data.append(values[0])
+            imu_data.append(values[0] - zero_angle_adjust)
             imu_data.append(values[1]-start_yaw)
             imu_data.append(values[2])
             imu_data.append(values[3])

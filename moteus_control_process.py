@@ -38,12 +38,12 @@ async def control_main(termination_event, input_value, imu_shared_array, odometr
 
     t2m = 0.528 #turns to meters
     W = 0.567   # Distance between wheels in meters
-    max_torque_delta = 0.2
+    max_torque_delta = 0.3
     
     
     #KEYBOARD CONTROL
-    K_balance             = np.array([[-3.87, -6.55, -43.01, -20.61, -0.00, -0.00],[-0.00, -0.00, -0.00, -0.00, 0.32, 0.76]])
-    K_forward_backward    = np.array([[-0.45, -6.82, -55.79, -26.84, 0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 1.41, 1.54]])
+    K_balance             = np.array([[-7.07, -10.82, -60.87, -29.32, -0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 0.58, 1.10]] )
+    K_forward_backward    = np.array([[-0.71, -7.85, -61.71, -29.74, 0.00, -0.00],[0.00, 0.00, 0.00, 0.00, 2.24, 1.98]] )
     K_left_right          = np.array([[-1.73, -5.30, -41.64, -19.93, 0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 0.03, 2.46]] )
     
     
@@ -127,7 +127,7 @@ async def control_main(termination_event, input_value, imu_shared_array, odometr
             prev_dir = 1
             x_stable = combined_current_position
             yaw_stable = -yaw_angle85
-            Xf_selected = np.array([combined_current_position, 0.3, 0.02, 0, yaw_stable, 0])
+            Xf_selected = np.array([combined_current_position, 0.3, 0.025, 0, yaw_stable, 0])
             K_selected = K_forward_backward
             
         elif input_value.value == 2:
@@ -141,14 +141,14 @@ async def control_main(termination_event, input_value, imu_shared_array, odometr
             prev_dir = 0
             x_stable = combined_current_position
             yaw_stable = -yaw_angle85
-            Xf_selected = np.array([x_stable, 0, 0, 0, -yaw_angle85, -1.5])
+            Xf_selected = np.array([combined_current_position, 0, 0, 0, -yaw_angle85, -1.5])
             K_selected = K_left_right
             
         elif input_value.value == 4:
             prev_dir = 0
             x_stable = combined_current_position
             yaw_stable = -yaw_angle85
-            Xf_selected = np.array([x_stable, 0, 0, 0, -yaw_angle85, 1.5])
+            Xf_selected = np.array([combined_current_position, 0, 0, 0, -yaw_angle85, 1.5])
             K_selected = K_left_right
         
         
@@ -169,8 +169,8 @@ async def control_main(termination_event, input_value, imu_shared_array, odometr
         Cl = np.clip(Cl, moteus1_previous_torque_command - max_torque_delta, moteus1_previous_torque_command + max_torque_delta)
         Cr = np.clip(Cr, moteus2_previous_torque_command - max_torque_delta, moteus2_previous_torque_command + max_torque_delta)
         
-        m1state = await moteus1.set_position(position=math.nan, velocity=0.0, accel_limit=0.0, feedforward_torque=0, kp_scale=0, kd_scale=0, maximum_torque=5, query=True)
-        m2state = await moteus2.set_position(position=math.nan, velocity=0.0, accel_limit=0.0, feedforward_torque=0, kp_scale=0, kd_scale=0, maximum_torque=5, query=True)
+        m1state = await moteus1.set_position(position=math.nan, velocity=0.0, accel_limit=0.0, feedforward_torque=Cl, kp_scale=0, kd_scale=0, maximum_torque=5, query=True)
+        m2state = await moteus2.set_position(position=math.nan, velocity=0.0, accel_limit=0.0, feedforward_torque=Cr, kp_scale=0, kd_scale=0, maximum_torque=5, query=True)
         
         # LOGGING
         
