@@ -2,7 +2,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-from filterpy.kalman import KalmanFilter
+from filterpy.kalman import KalmanFilter, predict, update
 from filterpy.common import Q_discrete_white_noise
 
 
@@ -23,21 +23,20 @@ Q_cov = np.loadtxt('Q_cov.txt')
 # P = np.eye(N) * 1e5
 P = np.loadtxt('P.txt') if os.path.exists('P.txt') else np.eye(6) * 1e-6
 
-f.F = A*dt + np.eye(N)
-f.B = B*dt
-f.H = C
-f.P = P
-f.R = np.diag([1, 1e4, 1, 1e5, 1, 1e7]) * 1e-7
-f.Q = Q_cov[:N,:N]
+F = A*dt + np.eye(N)
+G = B*dt
+H = C
+R = np.diag([1, 1e4, 1, 1e5, 1, 1e7]) * 1e-7
+Q = Q_cov[:N,:N]
 
-f.x = measurements[0,:N]
+x = measurements[0,:N]
 fxs = []
 for z, u in zip(measurements[1:], torques[:-1]):
-    f.predict(u)
-    f.update(z)
-    fxs.append(f.x)
+    x, P = predict(x, P, F, Q, u, G)
+    x, P = update(x, P, z, R, H)
+    fxs.append(x)
 
-np.savetxt('P.txt', f.P)
+np.savetxt('P.txt', P)
 fxs = np.stack(fxs)
 
 fig, axs = plt.subplots(nrows=N, ncols=1, figsize=(50, 15))
