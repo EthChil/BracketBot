@@ -1,1 +1,12 @@
 fibre/
+*.pyc
+venv/git 
+*/Data/*
+*/Examples/ROS/*
+*/Vocabulary/
+/maps2d/*
+/orbslam_independant_files/*
+*.png
+*.txt
+
+ORBvoc.txt

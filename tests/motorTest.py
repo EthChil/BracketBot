@@ -5,7 +5,7 @@ from odrive.enums import *
 import time
 import matplotlib.pyplot as plt
 import numpy as np
-import IMU_uncool
+import IMU
 
 
 from odriveDriver import Axis
@@ -18,16 +18,30 @@ odrv0 = odrive.find_any()
 
 
 a0 = Axis(odrv0.axis0, dir=1)
-a1 = Axis(odrv0.axis1, dir=1)
+# a1 = Axis(odrv0.axis1, dir=1)
 
 a0.setup()
-a1.setup()
+# a1.setup()
 
-a0.set_trq(0.2)
-a1.set_trq(0.2)
 
-time.sleep(5)
+# a0_init_pos = a0.get_pos_turns()
+# a1_init_pos = a1.get_pos_turns()
+# print(a0.get_pos_turns())
+# print(a1.get_pos_turns())
+# print(a0.get_vel())
+# print(a1.get_vel())
+a0.set_trq(0)
+# a1.set_trq(0) 
+# print("RUNNING")
 
-a0.set_trq(0.0)
-a1.set_trq(0.0)
+# time.sleep(5)
+
+# a0.set_trq(0.0)
+# a1.set_trq(0.0)
+# print(a0.get_pos_turns() - a0_init_pos)
+# print(a1.get_pos_turns() - a1_init_pos)
+# print(a0.get_pos_turns())
+# print(a1.get_pos_turns())
+# print(a0.get_vel())
+# print(a1.get_vel())
 
