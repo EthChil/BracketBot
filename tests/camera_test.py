@@ -21,7 +21,7 @@ def gstreamer_pipeline(sensor_id=0, capture_width=1280, capture_height=720, disp
 
 def save_image(filename="output.jpg"):
     print(gstreamer_pipeline(flip_method=0))
-    video_capture = cv2.VideoCapture(gstreamer_pipeline(flip_method=2), cv2.CAP_GSTREAMER)
+    video_capture = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
     if video_capture.isOpened():
         try:
             ret_val, frame = video_capture.read()

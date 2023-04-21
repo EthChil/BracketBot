@@ -1,15 +1,15 @@
 import numpy as np
 
 # Assuming you have state and control input data:
-states = np.loadtxt('states.txt')      # Load state data
-control_inputs = np.loadtxt('torques.txt')  # Load control input data
+states = np.loadtxt('../states.txt')      # Load state data
+control_inputs = np.loadtxt('../torques.txt')  # Load control input data
 
 n = states.shape[1]  # Number of states
 N = states.shape[0]  # Number of data points
 residuals = np.zeros((N - 1, n))
 
-A = np.loadtxt('lqr_params/A.txt', delimiter=',')
-B = np.loadtxt('lqr_params/B.txt', delimiter=',')
+A = np.loadtxt('../lqr_params/A.txt', delimiter=',')
+B = np.loadtxt('../lqr_params/B.txt', delimiter=',')
 
 for t in range(N - 1):
     x_t = states[t]
@@ -25,3 +25,4 @@ for t in range(N - 1):
 
 # Estimate Q by calculating the covariance of residuals
 Q_estimated = np.cov(residuals, rowvar=False)
+np.savetxt("Q_cov.txt", Q_estimated)
