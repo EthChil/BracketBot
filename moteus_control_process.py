@@ -22,6 +22,9 @@ def update_position(x, y, theta, d_left, d_right, W):
         return x, y, theta
     
 
+
+
+
 async def control_main(termination_event, input_value, imu_shared_array, odometry_shared_array,):
     fdcanusb = moteus.Fdcanusb(debug_log='./MASTER_LOGS/fdcanusb_debug.log')
     
@@ -80,6 +83,9 @@ async def control_main(termination_event, input_value, imu_shared_array, odometr
 
     m1state = await moteus1.set_stop(query=True)
     m2state = await moteus2.set_stop(query=True)
+    
+    states_to_save = []
+    torques_to_save = []
     
     
 
@@ -162,12 +168,18 @@ async def control_main(termination_event, input_value, imu_shared_array, odometr
             -yaw_angle85, 
             -yaw_rate85 
             ])
+        
+        states_to_save.append(X)
         D = np.array([[0.5, 0.5],[0.5, -0.5]])
         Cl, Cr = D @ (-K_selected @ (X - Xf_selected))
+        
+        torques_to_save.append(-K_selected @ (X - Xf_selected))
+        
         
         #TORQUE RAMPING
         Cl = np.clip(Cl, moteus1_previous_torque_command - max_torque_delta, moteus1_previous_torque_command + max_torque_delta)
         Cr = np.clip(Cr, moteus2_previous_torque_command - max_torque_delta, moteus2_previous_torque_command + max_torque_delta)
+        
         
         m1state = await moteus1.set_position(position=math.nan, velocity=0.0, accel_limit=0.0, feedforward_torque=Cl, kp_scale=0, kd_scale=0, maximum_torque=5, query=True)
         m2state = await moteus2.set_position(position=math.nan, velocity=0.0, accel_limit=0.0, feedforward_torque=Cr, kp_scale=0, kd_scale=0, maximum_torque=5, query=True)
@@ -201,6 +213,12 @@ async def control_main(termination_event, input_value, imu_shared_array, odometr
 
     m1state = await moteus1.set_stop(query=True)
     m2state = await moteus2.set_stop(query=True)
+    
+    states_to_save = np.stack(states_to_save)
+    np.savetxt("states.txt", states_to_save)
+    
+    torques_to_save = np.stack(torques_to_save)
+    np.savetxt("torques.txt", torques_to_save)
     
     
 

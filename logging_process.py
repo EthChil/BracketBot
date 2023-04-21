@@ -74,7 +74,6 @@ def run_logging_process(termination_event, imu_setup, imu_shared_array, odometry
         dt_imu85_process.append(imu_data[4])
         dt_logging_process.append(dt)
         
-        
         time.sleep(0.001)
         
         
