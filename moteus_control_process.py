@@ -24,8 +24,14 @@ def update_position(x, y, theta, d_left, d_right, W):
 
 async def control_main(termination_event, input_value, imu_shared_array, odometry_shared_array,):
     fdcanusb = moteus.Fdcanusb(debug_log='./MASTER_LOGS/fdcanusb_debug.log')
-    moteus1 = moteus.Controller(id=1, transport=fdcanusb)
-    moteus2 = moteus.Controller(id=2, transport=fdcanusb)
+    
+    qr = moteus.QueryResolution()
+    qr.position = moteus.multiplex.F32
+    qr.velocity = moteus.multiplex.F32
+    qr.torque = moteus.multiplex.F32
+    
+    moteus1 = moteus.Controller(id=1, transport=fdcanusb, query_resolution=qr)
+    moteus2 = moteus.Controller(id=2, transport=fdcanusb, query_resolution=qr)
 
     m1state = await moteus1.set_stop(query=True)
     m2state = await moteus2.set_stop(query=True)
@@ -74,6 +80,8 @@ async def control_main(termination_event, input_value, imu_shared_array, odometr
 
     m1state = await moteus1.set_stop(query=True)
     m2state = await moteus2.set_stop(query=True)
+    
+    
 
     while cur_time < 600 and not termination_event.is_set():        
         cur_time = time.time() - start_time
@@ -111,13 +119,11 @@ async def control_main(termination_event, input_value, imu_shared_array, odometr
         
         # KEYBOARD CONTRL
         if input_value.value == -1:
-            print('bal')
             #0.3 is to allow it to slow down
             Xf_selected = np.array([x_stable+0.3*prev_dir, 0, 0.0, 0, yaw_stable, 0])
             K_selected = K_balance
             
         elif input_value.value == 1:
-            print('fwd')
             prev_dir = 1
             x_stable = combined_current_position
             yaw_stable = -yaw_angle85
@@ -125,7 +131,6 @@ async def control_main(termination_event, input_value, imu_shared_array, odometr
             K_selected = K_forward_backward
             
         elif input_value.value == 2:
-            print("back")
             prev_dir = -1
             x_stable = combined_current_position
             yaw_stable = -yaw_angle85
@@ -133,7 +138,6 @@ async def control_main(termination_event, input_value, imu_shared_array, odometr
             K_selected = K_forward_backward
             
         elif input_value.value == 3:
-            print('left')
             prev_dir = 0
             x_stable = combined_current_position
             yaw_stable = -yaw_angle85
@@ -141,7 +145,6 @@ async def control_main(termination_event, input_value, imu_shared_array, odometr
             K_selected = K_left_right
             
         elif input_value.value == 4:
-            print("right")
             prev_dir = 0
             x_stable = combined_current_position
             yaw_stable = -yaw_angle85
@@ -156,7 +159,7 @@ async def control_main(termination_event, input_value, imu_shared_array, odometr
             combined_current_velocity, 
             -pitch_angle85, 
             pitch_rate85, 
-            -theta_ego, 
+            -yaw_angle85, 
             -yaw_rate85 
             ])
         D = np.array([[0.5, 0.5],[0.5, -0.5]])
@@ -166,8 +169,8 @@ async def control_main(termination_event, input_value, imu_shared_array, odometr
         Cl = np.clip(Cl, moteus1_previous_torque_command - max_torque_delta, moteus1_previous_torque_command + max_torque_delta)
         Cr = np.clip(Cr, moteus2_previous_torque_command - max_torque_delta, moteus2_previous_torque_command + max_torque_delta)
         
-        m1state = await moteus1.set_position(position=math.nan, velocity=0.0, accel_limit=0.0, feedforward_torque=Cl, kp_scale=0, kd_scale=0, maximum_torque=5, query=True)
-        m2state = await moteus2.set_position(position=math.nan, velocity=0.0, accel_limit=0.0, feedforward_torque=Cr, kp_scale=0, kd_scale=0, maximum_torque=5, query=True)
+        m1state = await moteus1.set_position(position=math.nan, velocity=0.0, accel_limit=0.0, feedforward_torque=0, kp_scale=0, kd_scale=0, maximum_torque=5, query=True)
+        m2state = await moteus2.set_position(position=math.nan, velocity=0.0, accel_limit=0.0, feedforward_torque=0, kp_scale=0, kd_scale=0, maximum_torque=5, query=True)
         
         # LOGGING
         
