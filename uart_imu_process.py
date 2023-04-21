@@ -1,6 +1,10 @@
 #!/usr/bin/python3
 import time
 import serial
+import numpy as np
+
+from scipy.signal import savgol_coeffs
+
 
 def parse_message(message):
     data = message.split(',')
@@ -30,6 +34,12 @@ def initial_read(ser):
             print("Initial read values:", values)
             return values[1]
 
+def savgol_filter_online(data, window_length, polyorder):
+    if len(data) < window_length:
+        return np.zeros_like(data)
+    coeffs = savgol_coeffs(window_length, polyorder)
+    return np.convolve(data, coeffs[::-1], mode='valid')
+
 zero_angle_adjust = 0.0 #shits mounted perfectly
 
 def run_uart_imu_process(termination_event, imu_setup, imu_shared_array):
@@ -47,13 +57,20 @@ def run_uart_imu_process(termination_event, imu_setup, imu_shared_array):
     serial_port.flushInput()
 
     start_yaw = initial_read(serial_port)
-    imu_setup.set()
+    # imu_setup.set()
             
     serial_port.flushInput()
     prev_time = time.time()
     
-    buffer = ''    
+    buffer = ''   
     
+    window_length = 21  # Must be odd
+    polyorder = 3  # Polynomial order
+    
+    # Initialize variables to store pitch and yaw rate values
+    pitch_rate_values = []
+    yaw_rate_values = []
+
     while not termination_event.is_set():
         cur_time = time.time()
         dt = cur_time - prev_time
@@ -77,11 +94,27 @@ def run_uart_imu_process(termination_event, imu_setup, imu_shared_array):
             values = parse_message(message)
             
             imu_data = []
+            
+            # Collect initial samples in buffer
+            pitch_rate_values.append(values[2])
+            yaw_rate_values.append(values[3])
+
+            # Start filtering once the buffer has enough samples
+            if len(pitch_rate_values) > window_length:
+                filtered_pitch_rate = savgol_filter_online(pitch_rate_values[-window_length:], window_length, polyorder)
+                filtered_yaw_rate = savgol_filter_online(yaw_rate_values[-window_length:], window_length, polyorder)
+            else:
+                filtered_pitch_rate = [0]
+                filtered_yaw_rate = [0]
+                
+            if len(pitch_rate_values) > 50:
+                imu_setup.set()
+                
         
             imu_data.append(values[0] - zero_angle_adjust)
             imu_data.append(values[1]-start_yaw)
-            imu_data.append(values[2])
-            imu_data.append(values[3])
+            imu_data.append(filtered_pitch_rate[0])
+            imu_data.append(filtered_yaw_rate[0])
             imu_data.append(dt)
             
             with imu_shared_array.get_lock():

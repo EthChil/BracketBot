@@ -41,11 +41,11 @@ async def control_main(termination_event, input_value, imu_shared_array, odometr
 
     t2m = 0.528 #turns to meters
     W = 0.567   # Distance between wheels in meters
-    max_torque_delta = 0.3
+    max_torque_delta = 0.2
     
     
     #KEYBOARD CONTROL
-    K_balance             = np.array([[-7.07, -10.82, -60.87, -29.32, -0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 0.58, 1.10]] )
+    K_balance             = np.array([[-5.77, -9.30, -55.16, -26.60, -0.00, -0.00],[-0.00, -0.00, -0.00, -0.00, 0.58, 1.10]]  )
     K_forward_backward    = np.array([[-0.71, -7.85, -61.71, -29.74, 0.00, -0.00],[0.00, 0.00, 0.00, 0.00, 2.24, 1.98]] )
     K_left_right          = np.array([[-1.73, -5.30, -41.64, -19.93, 0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 0.03, 2.46]] )
     
@@ -181,8 +181,8 @@ async def control_main(termination_event, input_value, imu_shared_array, odometr
         Cr = np.clip(Cr, moteus2_previous_torque_command - max_torque_delta, moteus2_previous_torque_command + max_torque_delta)
         
         
-        m1state = await moteus1.set_position(position=math.nan, velocity=0.0, accel_limit=0.0, feedforward_torque=Cl, kp_scale=0, kd_scale=0, maximum_torque=5, query=True)
-        m2state = await moteus2.set_position(position=math.nan, velocity=0.0, accel_limit=0.0, feedforward_torque=Cr, kp_scale=0, kd_scale=0, maximum_torque=5, query=True)
+        m1state = await moteus1.set_position(position=math.nan, velocity=0.0, accel_limit=0.0, feedforward_torque=Cl, kp_scale=0, kd_scale=0, maximum_torque=10, query=True)
+        m2state = await moteus2.set_position(position=math.nan, velocity=0.0, accel_limit=0.0, feedforward_torque=Cr, kp_scale=0, kd_scale=0, maximum_torque=10, query=True)
         
         # LOGGING
         
@@ -215,10 +215,10 @@ async def control_main(termination_event, input_value, imu_shared_array, odometr
     m2state = await moteus2.set_stop(query=True)
     
     states_to_save = np.stack(states_to_save)
-    np.savetxt("states.txt", states_to_save)
+    # np.savetxt("states.txt", states_to_save)
     
     torques_to_save = np.stack(torques_to_save)
-    np.savetxt("torques.txt", torques_to_save)
+    # np.savetxt("torques.txt", torques_to_save)
     
     
 
