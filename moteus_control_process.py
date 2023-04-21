@@ -21,8 +21,22 @@ def update_position(x, y, theta, d_left, d_right, W):
 
         return x, y, theta
     
+class ControllerData:
+    def __init__(self):
+        self.x_ego = 0
+        self.y_ego = 0
+        self.theta_ego = 0
+        self.moteus1_current_position = 0
+        self.moteus2_current_position = 0
+        self.moteus1_current_velocity = 0
+        self.moteus2_current_velocity = 0
+        self.moteus1_torque_reading = 0
+        self.moteus2_torque_reading = 0
+        self.moteus1_torque_command = 0
+        self.moteus2_torque_command = 0
+        self.dt_moteus_control = 0
 
-async def control_main(termination_event, imu_and_odometry_dict, input_dict):
+async def control_main(termination_event, imu_reader_controller, controller_write_to_logger, input_value):
     fdcanusb = moteus.Fdcanusb(debug_log='./MASTER_LOGS/fdcanusb_debug.log')
     moteus1 = moteus.Controller(id=1, transport=fdcanusb)
     moteus2 = moteus.Controller(id=2, transport=fdcanusb)
@@ -55,10 +69,13 @@ async def control_main(termination_event, imu_and_odometry_dict, input_dict):
     moteus2_previous_torque_command = 0
     x_ego, y_ego, theta_ego = 0, 0, 0
     
-    pitch_angle85    = imu_and_odometry_dict.get("pitch_angle85", 0)
-    yaw_angle85      = imu_and_odometry_dict.get("yaw_angle85", 0) 
-    pitch_rate85 = imu_and_odometry_dict.get("pitch_rate85", 0)
-    yaw_rate85   = imu_and_odometry_dict.get("yaw_rate85", 0)
+    
+    imu_data = imu_reader_controller.recv()
+    
+    pitch_angle85    = imu_data.pitch_angle85
+    yaw_angle85      = imu_data.yaw_angle85
+    pitch_rate85 = imu_data.pitch_rate85
+    yaw_rate85   = imu_data.yaw_rate85
     
     # FOR KEYBOARD CONTROL
     x_stable = 0
@@ -96,41 +113,52 @@ async def control_main(termination_event, imu_and_odometry_dict, input_dict):
         combined_current_position = (moteus1_current_position + moteus2_current_position)/2
         combined_current_velocity = (moteus1_current_velocity + moteus2_current_velocity)/2
         
-        pitch_angle85    = imu_and_odometry_dict.get("pitch_angle85", 0)
-        yaw_angle85      = imu_and_odometry_dict.get("yaw_angle85", 0) 
-        pitch_rate85 = imu_and_odometry_dict.get("pitch_rate85", 0)
-        yaw_rate85   = imu_and_odometry_dict.get("yaw_rate85", 0)
-        
+        most_recent_data = None
+        while imu_reader_controller.poll() and not termination_event.is_set():
+            most_recent_data = imu_reader_controller.recv()
+
+        if most_recent_data is not None:
+            pitch_angle85    = most_recent_data.pitch_angle85
+            yaw_angle85      = most_recent_data.yaw_angle85
+            pitch_rate85 = most_recent_data.pitch_rate85
+            yaw_rate85   = most_recent_data.yaw_rate85
+            
+                    
         x_ego, y_ego, theta_ego = update_position(x_ego, y_ego, theta_ego, moteus1_delta_position, moteus2_delta_position, W)
         
         # KEYBOARD CONTRL
-        if input_dict.get("key", "NOPE") == "NONE":
+        if input_value.value == -1:
+            print('bal')
             #0.3 is to allow it to slow down
             Xf_selected = np.array([x_stable+0.3*prev_dir, 0, 0.0, 0, yaw_stable, 0])
             K_selected = K_balance
             
-        elif input_dict.get("key", "NOPE") == "W":
+        elif input_value.value == 1:
+            print('fwd')
             prev_dir = 1
             x_stable = combined_current_position
             yaw_stable = -yaw_angle85
             Xf_selected = np.array([combined_current_position, 0.25, 0.01, 0, yaw_stable, 0])
             K_selected = K_forward_backward
             
-        elif input_dict.get("key", "NOPE") == "S":
+        elif input_value.value == 2:
+            print("back")
             prev_dir = -1
             x_stable = combined_current_position
             yaw_stable = -yaw_angle85
             Xf_selected = np.array([combined_current_position, -0.25, -0.01, 0, yaw_stable, 0])
             K_selected = K_forward_backward
             
-        elif input_dict.get("key", "NOPE") == "A":
+        elif input_value.value == 3:
+            print('left')
             prev_dir = 0
             x_stable = combined_current_position
             yaw_stable = -yaw_angle85
             Xf_selected = np.array([x_stable, 0, 0.01, 0, -yaw_angle85, -1.5])
             K_selected = K_left_right
             
-        elif input_dict.get("key", "NOPE") == "D":
+        elif input_value.value == 4:
+            print("right")
             prev_dir = 0
             x_stable = combined_current_position
             yaw_stable = -yaw_angle85
@@ -155,27 +183,28 @@ async def control_main(termination_event, imu_and_odometry_dict, input_dict):
         Cl = np.clip(Cl, moteus1_previous_torque_command - max_torque_delta, moteus1_previous_torque_command + max_torque_delta)
         Cr = np.clip(Cr, moteus2_previous_torque_command - max_torque_delta, moteus2_previous_torque_command + max_torque_delta)
         
-        # m1state = await moteus1.set_position(position=math.nan, velocity=0.0, accel_limit=0.0, feedforward_torque=Cl, kp_scale=0, kd_scale=0, maximum_torque=5, query=True)
-        # m2state = await moteus2.set_position(position=math.nan, velocity=0.0, accel_limit=0.0, feedforward_torque=Cr, kp_scale=0, kd_scale=0, maximum_torque=5, query=True)
-        
-        await moteus1.set_position(position=math.nan, velocity=0.0, accel_limit=0.0, feedforward_torque=0, kp_scale=0, kd_scale=0, maximum_torque=5, query=False)
-        await moteus2.set_position(position=math.nan, velocity=0.0, accel_limit=0.0, feedforward_torque=0, kp_scale=0, kd_scale=0, maximum_torque=5, query=False)
-        
+        m1state = await moteus1.set_position(position=math.nan, velocity=0.0, accel_limit=0.0, feedforward_torque=Cl, kp_scale=0, kd_scale=0, maximum_torque=5, query=True)
+        m2state = await moteus2.set_position(position=math.nan, velocity=0.0, accel_limit=0.0, feedforward_torque=Cr, kp_scale=0, kd_scale=0, maximum_torque=5, query=True)
         
         # LOGGING
-        imu_and_odometry_dict['x_ego']                    = x_ego
-        imu_and_odometry_dict['y_ego']                    = y_ego
-        imu_and_odometry_dict['theta_ego']                = theta_ego
-        imu_and_odometry_dict['moteus1_current_position'] = moteus1_current_position
-        imu_and_odometry_dict['moteus2_current_position'] = moteus2_current_position
-        imu_and_odometry_dict['moteus1_current_velocity'] = moteus1_current_velocity
-        imu_and_odometry_dict['moteus2_current_velocity'] = moteus2_current_velocity
-        imu_and_odometry_dict['moteus1_torque_reading']   = m1state.values[moteus.Register.TORQUE]
-        imu_and_odometry_dict['moteus2_torque_reading']   = m2state.values[moteus.Register.TORQUE]
-        imu_and_odometry_dict['moteus1_torque_command']   = Cl
-        imu_and_odometry_dict['moteus2_torque_command']   = Cr
-        imu_and_odometry_dict['dt_moteus_control']        = dt
-    
+        
+        data = ControllerData()
+        
+        data.x_ego = x_ego
+        data.y_ego = y_ego
+        data.theta_ego = theta_ego
+        data.moteus1_current_position = moteus1_current_position
+        data.moteus2_current_position = moteus2_current_position
+        data.moteus1_current_velocity = moteus1_current_velocity
+        data.moteus2_current_velocity = moteus2_current_velocity
+        data.moteus1_torque_reading = m1state.values[moteus.Register.TORQUE]
+        data.moteus2_torque_reading = m2state.values[moteus.Register.TORQUE]
+        data.moteus1_torque_command = Cl
+        data.moteus2_torque_command = Cr
+        data.dt_moteus_control = dt
+        
+        controller_write_to_logger.send(data)
+        
         moteus1_previous_position = moteus1_current_position
         moteus2_previous_position = moteus2_current_position
         moteus1_previous_torque_command = Cl
@@ -185,10 +214,11 @@ async def control_main(termination_event, imu_and_odometry_dict, input_dict):
 
     m1state = await moteus1.set_stop(query=True)
     m2state = await moteus2.set_stop(query=True)
+    
+    
 
-def run_moteus(termination_event, imu_setup, imu85_dict, input_dict, orbslam_setup):
+def run_moteus(termination_event, imu_setup, imu_reader_controller, controller_write_to_logger, input_value, orbslam_setup):
     imu_setup.wait() 
     orbslam_setup.wait()
     
-    asyncio.run(control_main(termination_event, imu85_dict, input_dict))
-    termination_event.set()
+    asyncio.run(control_main(termination_event, imu_reader_controller, controller_write_to_logger, input_value))

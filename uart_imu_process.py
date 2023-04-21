@@ -29,8 +29,16 @@ def initial_read(ser):
             values = parse_message(message)
             print("Initial read values:", values)
             return values[1]
+        
+class IMUData:
+    def __init__(self):
+        self.pitch_angle85 = 0
+        self.yaw_angle85 = 0
+        self.pitch_rate85 = 0
+        self.yaw_rate85 = 0
+        self.dt_imu85_process = 0
 
-def run_uart_imu_process(termination_event, imu_setup, imu_and_odometry_dict):
+def run_uart_imu_process(termination_event, imu_setup, imu_writer_to_controller, imu_writer_to_logger):
     
     serial_port = serial.Serial(
         port="/dev/ttyTHS1",
@@ -51,6 +59,9 @@ def run_uart_imu_process(termination_event, imu_setup, imu_and_odometry_dict):
     prev_time = time.time()
     
     buffer = ''
+    
+    data = IMUData()
+    
     
     while not termination_event.is_set():
         cur_time = time.time()
@@ -74,13 +85,18 @@ def run_uart_imu_process(termination_event, imu_setup, imu_and_odometry_dict):
             message = buffer[start_idx + 1:end_idx]
             values = parse_message(message)
             
-            imu_and_odometry_dict['pitch_angle85'] = values[0]
-            imu_and_odometry_dict['yaw_angle85'] = values[1]-start_yaw
-            imu_and_odometry_dict['pitch_rate85'] = values[2]
-            imu_and_odometry_dict['yaw_rate85'] = values[3]
-            imu_and_odometry_dict['dt_imu85_process'] = dt
+            data.pitch_angle85 = values[0]
+            data.yaw_angle85 = values[1]-start_yaw
+            data.pitch_rate85 = values[2]
+            data.yaw_rate85 = values[3]
+            data.dt_imu85_process = dt
+            
+            imu_writer_to_controller.send(data)
+            imu_writer_to_logger.send(data)
+            
 
             buffer = buffer[end_idx + 1:]
             
         else:
             print("INVALID DATA LENGH")   
+    

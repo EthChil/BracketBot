@@ -6,7 +6,9 @@ import matplotlib.pyplot as plt
 plt.switch_backend('Agg')
 plot_dir = './MASTER_LOGS/'
 
-def run_logging_process(termination_event, imu_setup, imu_and_odometry_dict):
+
+
+def run_logging_process(termination_event, imu_setup, imu_reader_logger, controller_reader_logger):
     imu_setup.wait() 
     
     start_time = time.time()
@@ -37,6 +39,9 @@ def run_logging_process(termination_event, imu_setup, imu_and_odometry_dict):
     dt_imu85_process = []
     dt_logging_process = []
     
+    imu_data = imu_reader_logger.recv()
+    controller_data = controller_reader_logger.recv()
+    
     while not termination_event.is_set():
         
         cur_time = time.time()-start_time
@@ -45,29 +50,32 @@ def run_logging_process(termination_event, imu_setup, imu_and_odometry_dict):
         
         times.append(cur_time)
         
-        x_ego.append(imu_and_odometry_dict.get("x_ego", 0))
-        y_ego.append(imu_and_odometry_dict.get("y_ego", 0))
-        theta_ego.append(imu_and_odometry_dict.get("theta_ego", 0))
-        moteus1_current_position.append(imu_and_odometry_dict.get("moteus1_current_position", 0))
-        moteus2_current_position.append(imu_and_odometry_dict.get("moteus2_current_position", 0))
-        moteus1_current_velocity.append(imu_and_odometry_dict.get("moteus1_current_velocity", 0))
-        moteus2_current_velocity.append(imu_and_odometry_dict.get("moteus2_current_velocity", 0))
-        moteus1_torque_reading.append(imu_and_odometry_dict.get("moteus1_torque_reading", 0))
-        moteus2_torque_reading.append(imu_and_odometry_dict.get("moteus2_torque_reading", 0))
-        moteus1_torque_command.append(imu_and_odometry_dict.get("moteus1_torque_command", 0))
-        moteus2_torque_command.append(imu_and_odometry_dict.get("moteus2_torque_command", 0))
-        dt_moteus_control.append(imu_and_odometry_dict.get("dt_moteus_control", 0))
-        pitch_angle85.append(imu_and_odometry_dict.get("pitch_angle85", 0))
-        yaw_angle85.append(imu_and_odometry_dict.get("yaw_angle85", 0))
-        pitch_rate85.append(imu_and_odometry_dict.get("pitch_rate85", 0))
-        yaw_rate85.append(imu_and_odometry_dict.get("yaw_rate85", 0))
-        pitch_rate85_ewa.append(imu_and_odometry_dict.get("pitch_rate85_ewa", 0))
-        yaw_rate85_ewa.append(imu_and_odometry_dict.get("yaw_rate85_ewa", 0))
-        dt_imu85_process.append(imu_and_odometry_dict.get("dt_imu85_process", 0))
+        imu_data = imu_reader_logger.recv()
+        controller_data = controller_reader_logger.recv()
+        
+        x_ego.append(controller_data.x_ego)
+        y_ego.append(controller_data.y_ego)
+        theta_ego.append(controller_data.theta_ego)
+        moteus1_current_position.append(controller_data.moteus1_current_position)
+        moteus2_current_position.append(controller_data.moteus2_current_position)
+        moteus1_current_velocity.append(controller_data.moteus1_current_velocity)
+        moteus2_current_velocity.append(controller_data.moteus2_current_velocity)
+        moteus1_torque_reading.append(controller_data.moteus1_torque_reading)
+        moteus2_torque_reading.append(controller_data.moteus1_torque_reading)
+        moteus1_torque_command.append(controller_data.moteus1_torque_command)
+        moteus2_torque_command.append(controller_data.moteus2_torque_command)
+        dt_moteus_control.append(controller_data.dt_moteus_control)
+        
+        pitch_angle85.append(imu_data.pitch_angle85)
+        yaw_angle85.append(imu_data.yaw_angle85)
+        pitch_rate85.append(imu_data.pitch_rate85)
+        yaw_rate85.append(imu_data.yaw_rate85)
+        dt_imu85_process.append(imu_data.dt_imu85_process)
         dt_logging_process.append(dt)
         
         
         time.sleep(0.001)
+        
         
     print("Saving Logs and Plots")
     
@@ -100,7 +108,7 @@ def run_logging_process(termination_event, imu_setup, imu_and_odometry_dict):
 
     # Plot 6
     axs[4].plot(times, pitch_rate85, label='pitch rates 85')
-    axs[4].plot(times, pitch_rate85_ewa, label='pitch rates 85 EWA')
+    # axs[4].plot(times, pitch_rate85_ewa, label='pitch rates 85 EWA')
     axs[4].legend()
     axs[4].set_title("pitch rates")
 
@@ -112,7 +120,7 @@ def run_logging_process(termination_event, imu_setup, imu_and_odometry_dict):
 
     # Plot 7
     axs[6].plot(times, yaw_rate85, label='Yaw Rates 85')
-    axs[6].plot(times, yaw_rate85_ewa, label='Yaw Rates 85 EWA')
+    # axs[6].plot(times, yaw_rate85_ewa, label='Yaw Rates 85 EWA')
     axs[6].legend()
     axs[6].set_title("Yaw Rates")
 
