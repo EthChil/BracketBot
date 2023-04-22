@@ -67,7 +67,7 @@ async def control_main(termination_event, input_value, imu_shared_array, odometr
         
     t2m = 0.528 #turns to meters
     W = 0.567   # Distance between wheels in meters
-    max_torque_delta = 0.5
+    max_torque_delta = 1
     
     
     #KEYBOARD CONTROL
@@ -155,9 +155,6 @@ async def control_main(termination_event, input_value, imu_shared_array, odometr
         dt = cur_time - prev_time
         prev_time = cur_time
         
-        dts_to_save.append(dt)
-
-        
         # VALUE UPDATING
         moteus1_current_position = m1state.values[moteus.Register.POSITION] * t2m * moteus1_direction - moteus1_initial_position
         moteus2_current_position = m2state.values[moteus.Register.POSITION] * t2m * moteus2_direction - moteus2_initial_position
@@ -240,7 +237,7 @@ async def control_main(termination_event, input_value, imu_shared_array, odometr
         x_hat, P = update(x_hat, P, z, R, H)
         
         D = np.array([[0.5, 0.5],[0.5, -0.5]])
-        U = -K_selected @ (z - Xf_selected)
+        U = -K_selected @ (x_hat - Xf_selected)
         Cl, Cr = D @ U
 
         states_to_save.append(x_hat)
@@ -298,13 +295,13 @@ async def control_main(termination_event, input_value, imu_shared_array, odometr
     m2state = await moteus2.set_stop(query=True)
     
     states_to_save = np.stack(states_to_save)
-    np.savetxt("./MASTER_LOGS/states.txt", states_to_save)
+    np.savetxt("./MASTER_LOGS/states_for_kalman_testing.txt", states_to_save)
     
     torques_to_save = np.stack(torques_to_save)
-    np.savetxt("./MASTER_LOGS/torques.txt", torques_to_save)
+    np.savetxt("./MASTER_LOGS/torques_for_kalman_testing.txt", torques_to_save)
     
     dts_to_save = np.stack(dts_to_save)
-    np.savetxt("./MASTER_LOGS/dts.txt", dts_to_save)
+    np.savetxt("./MASTER_LOGS/dts_for_kalman_testing.txt", dts_to_save)
     
     
 
