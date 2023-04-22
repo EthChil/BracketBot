@@ -1,9 +1,28 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import time
+from numba import jit
 
-from filterpy.kalman import KalmanFilter, predict, update
+from filterpy.kalman import KalmanFilter#, predict, update
 from filterpy.common import Q_discrete_white_noise
+
+@jit(nopython=True)
+def predict(x, P, F, Q, u, G):
+    x = F @ x + G @ u
+    P = (F @ P @ F.T) + Q
+    return x, P
+
+@jit(nopython=True)
+def update(x, P, z, R, H):
+    y = z - H @ x
+    S = H @ P @ H.T + R
+    K = P @ H.T @ np.linalg.inv(S)
+    x = x + K @ y
+    KH = K @ H
+    I_KH = np.eye(KH.shape[0]) - KH
+    P = I_KH @ P @ I_KH.T + K @ R @ K.T
+    return x, P
 
 
 measurements = np.loadtxt('../states.txt')
@@ -31,7 +50,10 @@ Q = Q_cov[:N,:N]
 
 x = measurements[0,:N]
 fxs = []
+last_time = time.time()
 for z, u in zip(measurements[1:], torques[:-1]):
+    print(time.time()-last_time)
+    last_time = time.time()
     x, P = predict(x, P, F, Q, u, G)
     x, P = update(x, P, z, R, H)
     fxs.append(x)

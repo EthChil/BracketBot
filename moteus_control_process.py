@@ -4,9 +4,15 @@ import numpy as np
 import math
 import asyncio
 import moteus
+import os
+from numba import jit
+
+from filterpy.kalman import KalmanFilter#, predict, update
+# import numba
 
 plt.switch_backend('Agg')
 plot_dir = './plots/'
+
 
 def update_position(x, y, theta, d_left, d_right, W):
         distance_left = d_left
@@ -20,18 +26,33 @@ def update_position(x, y, theta, d_left, d_right, W):
         theta += delta_theta
 
         return x, y, theta
-    
+  
+@jit(nopython=True)
+def predict(x, P, F, Q, u, G):
+    x = F @ x + G @ u
+    P = (F @ P @ F.T) + Q
+    return x, P
+
+@jit(nopython=True)
+def update(x, P, z, R, H):
+    y = z - H @ x
+    S = H @ P @ H.T + R
+    K = P @ H.T @ np.linalg.inv(S)
+    x = x + K @ y
+    KH = K @ H
+    I_KH = np.eye(KH.shape[0]) - KH
+    P = I_KH @ P @ I_KH.T + K @ R @ K.T
+    return x, P
 
 
-
-
-async def control_main(termination_event, input_value, imu_shared_array, odometry_shared_array,):
+async def control_main(termination_event, input_value, imu_shared_array, odometry_shared_array, LQR_state_array):
     fdcanusb = moteus.Fdcanusb(debug_log='./MASTER_LOGS/fdcanusb_debug.log')
     
     qr = moteus.QueryResolution()
     qr.position = moteus.multiplex.F32
     qr.velocity = moteus.multiplex.F32
     qr.torque = moteus.multiplex.F32
+    qr.voltage = moteus.multiplex.F32
     
     moteus1 = moteus.Controller(id=1, transport=fdcanusb, query_resolution=qr)
     moteus2 = moteus.Controller(id=2, transport=fdcanusb, query_resolution=qr)
@@ -39,13 +60,18 @@ async def control_main(termination_event, input_value, imu_shared_array, odometr
     m1state = await moteus1.set_stop(query=True)
     m2state = await moteus2.set_stop(query=True)
 
+    print(m1state.values[moteus.Register.VOLTAGE])
+    if m1state.values[moteus.Register.VOLTAGE] < 30:
+        print("YOOO BATTERY LOW WE AINT RUNNING HOE")
+        termination_event.set()
+        
     t2m = 0.528 #turns to meters
     W = 0.567   # Distance between wheels in meters
-    max_torque_delta = 0.2
+    max_torque_delta = 0.35
     
     
     #KEYBOARD CONTROL
-    K_balance             = np.array([[-5.77, -9.30, -55.16, -26.60, -0.00, -0.00],[-0.00, -0.00, -0.00, -0.00, 0.58, 1.10]]  )
+    K_balance             = np.array([[-1.00, -2.43, -25.97, -12.60, -0.00, -0.00],[-0.00, -0.00, -0.00, -0.00, 1.00, 1.27]] )
     K_forward_backward    = np.array([[-0.71, -7.85, -61.71, -29.74, 0.00, -0.00],[0.00, 0.00, 0.00, 0.00, 2.24, 1.98]] )
     K_left_right          = np.array([[-1.73, -5.30, -41.64, -19.93, 0.00, 0.00],[0.00, 0.00, 0.00, 0.00, 0.03, 2.46]] )
     
@@ -64,6 +90,8 @@ async def control_main(termination_event, input_value, imu_shared_array, odometr
     moteus2_previous_torque_command = 0
     x_ego, y_ego, theta_ego = 0, 0, 0
     
+    egos = []
+    
     with imu_shared_array.get_lock():
         imu_data = imu_shared_array[:]
     
@@ -77,18 +105,49 @@ async def control_main(termination_event, input_value, imu_shared_array, odometr
     yaw_stable = 0
     prev_dir = 0
 
-    start_time = time.time()
     cur_time = 0
     prev_time = 0
 
     m1state = await moteus1.set_stop(query=True)
     m2state = await moteus2.set_stop(query=True)
     
+    
+    # Kalman Filter
+    N=6
+    f = KalmanFilter(dim_x=N, dim_z=N, dim_u=2)
+    A  = np.loadtxt('./lqr_params/A.txt', delimiter=',')[:N,:N]
+    B = np.loadtxt('./lqr_params/B.txt', delimiter=',')[:N]
+    C = np.eye(N, dtype=float)
+    Q_cov = np.loadtxt('./lqr_params/Q_cov.txt')
+    P = np.loadtxt('./lqr_params/P.txt') if os.path.exists('./lqr_params/P.txt') else np.eye(6) * 1e-6
+    
+    H = C
+    R = np.diag([1, 1e4, 1, 1e5, 1, 1e7]) * 1e-7
+    Q = Q_cov[:N,:N]
+    
+    x_kf_init = [
+        0,
+        0,
+        pitch_angle85,
+        pitch_rate85,
+        yaw_angle85,
+        yaw_rate85
+    ]
+    x_hat = np.array(x_kf_init, dtype=float)
+    
+    U = np.array([0.,0.])
+    
+    # THIS STEP IS ONLY FOR NUMBA TO COMPILE THE FUNCTIONS
+    F = A*0.01 + np.eye(N)
+    G = B*0.01
+    predict(x_hat, P, F, Q, U, G)
+    update(x_hat, P, x_hat, R, H)
+    
     states_to_save = []
     torques_to_save = []
+    start_time = time.time()
     
     
-
     while cur_time < 600 and not termination_event.is_set():        
         cur_time = time.time() - start_time
         dt = cur_time - prev_time
@@ -122,11 +181,14 @@ async def control_main(termination_event, input_value, imu_shared_array, odometr
         yaw_rate85   = imu_data[3]
                     
         x_ego, y_ego, theta_ego = update_position(x_ego, y_ego, theta_ego, moteus1_delta_position, moteus2_delta_position, W)
+        egos.append([x_ego, y_ego, theta_ego, time.time()])
+
         
         # KEYBOARD CONTRL
         if input_value.value == -1:
             #0.3 is to allow it to slow down
-            Xf_selected = np.array([x_stable+0.3*prev_dir, 0, 0.0, 0, yaw_stable, 0])
+            # Xf_selected = np.array([x_stable+0.3*prev_dir, 0, 0.0, 0, yaw_stable, 0])
+            Xf_selected = np.array([combined_current_position, 0, 0.0, 0, -yaw_angle85, -yaw_rate85]) #GET RID OF THIS AFTER
             K_selected = K_balance
             
         elif input_value.value == 1:
@@ -157,10 +219,9 @@ async def control_main(termination_event, input_value, imu_shared_array, odometr
             Xf_selected = np.array([combined_current_position, 0, 0, 0, -yaw_angle85, 1.5])
             K_selected = K_left_right
         
-        
-        
+    
         # CONTROL CODE
-        X = np.array([
+        z = np.array([
             combined_current_position, 
             combined_current_velocity, 
             -pitch_angle85, 
@@ -169,12 +230,18 @@ async def control_main(termination_event, input_value, imu_shared_array, odometr
             -yaw_rate85 
             ])
         
-        states_to_save.append(X)
+        #Kalman stuff
+        F = A*dt + np.eye(N)
+        G = B*dt
+        x_hat, P = predict(x_hat, P, F, Q, U, G)
+        x_hat, P = update(x_hat, P, z, R, H)
+        
+        states_to_save.append(x_hat)
         D = np.array([[0.5, 0.5],[0.5, -0.5]])
-        Cl, Cr = D @ (-K_selected @ (X - Xf_selected))
-        
-        torques_to_save.append(-K_selected @ (X - Xf_selected))
-        
+        U = -K_selected @ (x_hat - Xf_selected)
+        Cl, Cr = D @ U
+
+        torques_to_save.append(U)
         
         #TORQUE RAMPING
         Cl = np.clip(Cl, moteus1_previous_torque_command - max_torque_delta, moteus1_previous_torque_command + max_torque_delta)
@@ -204,12 +271,18 @@ async def control_main(termination_event, input_value, imu_shared_array, odometr
         with odometry_shared_array.get_lock():
             odometry_shared_array[:] = odometry_data
             
+        with LQR_state_array.get_lock():
+            LQR_state_array[:] = np.append(z, x_hat)
+            
         moteus1_previous_position = moteus1_current_position
         moteus2_previous_position = moteus2_current_position
         moteus1_previous_torque_command = Cl
         moteus2_previous_torque_command = Cr
         
         await asyncio.sleep(0)
+        
+        
+    np.savetxt("egos.txt", egos)
 
     m1state = await moteus1.set_stop(query=True)
     m2state = await moteus2.set_stop(query=True)
@@ -222,8 +295,8 @@ async def control_main(termination_event, input_value, imu_shared_array, odometr
     
     
 
-def run_moteus(termination_event, imu_setup, imu_shared_array, odometry_shared_array,input_value, orbslam_setup):
+def run_moteus(termination_event, imu_setup, imu_shared_array, odometry_shared_array,LQR_state_array, input_value, orbslam_setup):
     imu_setup.wait() 
     orbslam_setup.wait()
     
-    asyncio.run(control_main(termination_event, input_value, imu_shared_array, odometry_shared_array,))
+    asyncio.run(control_main(termination_event, input_value, imu_shared_array, odometry_shared_array,LQR_state_array))
