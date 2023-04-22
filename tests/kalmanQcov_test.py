@@ -2,8 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Assuming you have state and control input data:
-states = np.loadtxt('../states.txt')      # Load state data
-control_inputs = np.loadtxt('../torques.txt')  # Load control input data
+log_dir = '../MASTER_LOGS-forivan/'
+states = np.loadtxt(log_dir + 'states.txt')      # Load state data
+control_inputs = np.loadtxt(log_dir + 'torques.txt')  # Load control input data
+dts = np.loadtxt(log_dir + 'dts.txt')[::2]  # Load time step data
 
 n = states.shape[1]  # Number of states
 N = states.shape[0]  # Number of data points
@@ -12,15 +14,15 @@ preds = np.zeros((N - 1, n))
 
 A = np.loadtxt('../lqr_params/A.txt', delimiter=',')
 B = np.loadtxt('../lqr_params/B.txt', delimiter=',')
-dt = 0.006
 
-for t in range(N - 1):
+# Skip first 10 timsteps cause sometimes there's big spikes
+for t in range(10, N - 1):
     x_t = states[t]
     x_t1_true = states[t + 1]
     u_t = control_inputs[t]
 
     # Predict next state using dynamic model
-    x_t1_pred = x_t + (A @ x_t + B @ u_t) * dt
+    x_t1_pred = x_t + (A @ x_t + B @ u_t) * dts[t]
     preds[t] = x_t1_pred 
 
     # Calculate residual (difference between true and predicted state)
@@ -29,7 +31,7 @@ for t in range(N - 1):
 
 # Estimate Q by calculating the covariance of residuals
 Q_estimated = np.cov(residuals, rowvar=False)
-np.savetxt("Q_cov.txt", Q_estimated)
+np.savetxt("../lqr_params/Q_cov.txt", Q_estimated)
 
 
 fig, axs = plt.subplots(nrows=6, ncols=1, figsize=(100, 30))
@@ -42,6 +44,5 @@ for i, name in enumerate(['Position', 'Velocity', 'Pitch', 'Pitch rate', 'Yaw', 
     axs[i].legend()
 plt.tight_layout()
 plt.savefig('residuals.png')
-
 
 print(np.sum(residuals**2) / np.sum((states[1:]-states[:-1])**2))

@@ -1,4 +1,3 @@
-import os
 import numpy as np
 import matplotlib.pyplot as plt
 import time
@@ -24,24 +23,28 @@ def update(x, P, z, R, H):
     return x, P
 
 log_dir = '../MASTER_LOGS-forivan/'
+params_dir = '../lqr_params/'
 measurements = np.loadtxt(log_dir + 'states.txt')
 torques = np.loadtxt(log_dir + 'torques.txt')
 dts = np.loadtxt(log_dir + 'dts.txt')[::2]
 
-print(measurements.shape, torques.shape, dts.shape)
+# print(measurements.shape, torques.shape, dts.shape)
 
 N = 6
 
 # Kalman filter
 f = KalmanFilter(dim_x=N, dim_z=N, dim_u=2)
 
-A  = np.loadtxt('../lqr_params/A.txt', delimiter=',')[:N,:N]
-B = np.loadtxt('../lqr_params/B.txt', delimiter=',')[:N]
+A  = np.loadtxt(params_dir + 'A.txt', delimiter=',')[:N,:N]
+B = np.loadtxt(params_dir + 'B.txt', delimiter=',')[:N]
 C = np.eye(N)
 
-Q_cov = np.loadtxt('Q_cov.txt')
+Q_cov = np.loadtxt(params_dir + 'Q_cov.txt')
 # P = np.eye(N) * 1e5
-P = np.loadtxt('P.txt') if os.path.exists('P.txt') else np.eye(6) * 1e-6
+try:
+    P = np.loadtxt(params_dir + 'P.txt')
+except FileNotFoundError:
+    P = np.eye(6) * 1e-6
 
 H = C
 R = np.diag([1e-7, 5e-4, 4e-5, 5e-2, 1e-7, 1e-1])
@@ -57,7 +60,8 @@ for z, u, dt in zip(measurements[1:], torques[:-1], dts):
     x, P = update(x, P, z, R, H)
     fxs.append(x)
 
-np.savetxt('P.txt', P)
+np.savetxt(params_dir + 'P.txt', P)
+np.savetxt(params_dir + 'R_cov.txt', R)
 fxs = np.stack(fxs)
 
 fig, axs = plt.subplots(nrows=N+1, ncols=1, figsize=(50, 15))
