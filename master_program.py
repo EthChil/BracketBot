@@ -2,7 +2,7 @@ from multiprocessing import Process, Event, Value, Pipe, Array
 
 # from imu85_process import run_imu85_process
 from uart_imu_process import run_uart_imu_process
-# from camera_process import run_camera
+from camera_process import run_camera
 from moteus_control_process import run_moteus
 from logging_process import run_logging_process
 from keyboard_input_process import keyboard_input
@@ -27,21 +27,21 @@ if __name__ == "__main__":
     uart_imu_process = Process(target=run_uart_imu_process, args=(termination_event, imu_setup, imu_shared_array))
     logging_process = Process(target=run_logging_process, args=(termination_event, imu_setup, imu_shared_array, odometry_shared_array, LQR_state_array))
     keyboard_input_process = Process(target=keyboard_input, args=(input_value, termination_event))
-    # camera_process = Process(target=run_camera, args=(termination_event, ))
+    camera_process = Process(target=run_camera, args=(termination_event, ))
     # orbslam_runner_process = Process(target=run_orbslam, args=('ORBvoc.txt', 'arducam.yaml', termination_event, orbslam_setup))
         
     uart_imu_process.start()
     moteus_control.start()
     logging_process.start()
     keyboard_input_process.start()
-    # camera_process.start()
+    camera_process.start()
     # orbslam_runner_process.start()
     
     uart_imu_process.join()
     moteus_control.join()
     logging_process.join()
     keyboard_input_process.join()
-    # camera_process.join()
+    camera_process.join()
     # orbslam_runner_process.join()
 
         
