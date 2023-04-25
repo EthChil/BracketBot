@@ -7,6 +7,10 @@
 
 #include <chrono>
 
+//build command:
+// g++ main.cpp Lib/I2C/I2CDevice.cpp -o i2c_test -std=c++11
+
+
 float getCurrentTime() {
     static const auto start_time = std::chrono::steady_clock::now();
     auto now = std::chrono::steady_clock::now();

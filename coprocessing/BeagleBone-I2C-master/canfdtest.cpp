@@ -9,6 +9,8 @@
 #include <linux/can.h>
 #include <linux/can/raw.h>
 #include <libsocketcan.h>
+#include <chrono>
+
 
 int main()
 {
@@ -44,46 +46,70 @@ int main()
         return -1;
     }
 
+    // WORKING VOLTAGE CALL
+    // frame.can_id = 0x8001 | CAN_EFF_FLAG; // CAN ID (Extended format)
+    // frame.len = 3;                         // Length of data
+    // frame.flags = CANFD_ESI | CANFD_BRS;  // Use CAN FD flags
+    // frame.data[0] = 0x10;                 // Read command (int8)
+    // frame.data[1] = 0x01;                 // Number of registers (1)
+    // frame.data[2] = 0x00D;                 // Start register number (0x00D for voltage)
+
+
+    //query position, velocity, and torque
     frame.can_id = 0x8001 | CAN_EFF_FLAG; // CAN ID (Extended format)
-    frame.len = 3;                         // Length of data
     frame.flags = CANFD_ESI | CANFD_BRS;  // Use CAN FD flags
-    frame.data[0] = 0x10;                 // Read command (int8)
-    frame.data[1] = 0x01;                 // Number of registers (1)
-    frame.data[2] = 0x00D;                 // Start register number (0x00D for voltage)
+    frame.len = 3;                         // Length of data (3 bytes)
+    frame.data[0] = 0x14;                 // Read int16 registers
+    frame.data[1] = 0x03;                 // Number of registers to read (3 registers: Position and Velocity)
+    frame.data[2] = 0x001;  
 
 
     // Send the CAN frame
-    if (write(s, &frame, sizeof(frame)) != sizeof(frame)) {
-        perror("Error sending CAN frame");
-        printf("write returned %d\n", errno);
-        printf("frame ID: %x\n", frame.can_id);
-        printf("frame length: %d\n", frame.len);
-        printf("frame flags: %d\n", frame.flags);
-        printf("frame data: ");
-        for (int i = 0; i < frame.len; i++) {
-            printf("%02X ", frame.data[i]);
+    // write(s, &frame, sizeof(frame));
+
+    
+
+
+    // Number of iterations
+    const int iterations = 100; // Change this value to test more/less messages
+
+    // Start the timer
+    auto start_time = std::chrono::high_resolution_clock::now();
+
+    for (int i = 0; i < iterations; i++) {
+
+
+        // Send the CAN frame
+        write(s, &frame, sizeof(frame));
+
+        // Receive the response CAN frame
+        int nbytes = read(s, &response_frame, sizeof(response_frame));
+        if (nbytes < 0) {
+            perror("Error receiving CAN frame");
+            return -1;
+        } else if (nbytes < (int)sizeof(struct canfd_frame)) {
+            fprintf(stderr, "Received incomplete CAN frame\n");
+            return -1;  
+        } else {
+            printf("Received CAN frame: ID=0x%X DLC=%d Data=", response_frame.can_id, response_frame.len);
+            for (int i = 0; i < response_frame.len; i++) {
+                printf("%02X ", response_frame.data[i]);
+            }
+            printf("\n");
         }
-        printf("\n");
-        printf("addr family: %d\n", addr.can_family);
-        printf("addr interface index: %d\n", addr.can_ifindex);
-        return -1;
     }
 
-    // Receive the response CAN frame
-    int nbytes = read(s, &response_frame, sizeof(response_frame));
-    if (nbytes < 0) {
-        perror("Error receiving CAN frame");
-        return -1;
-    } else if (nbytes < (int)sizeof(struct canfd_frame)) {
-        fprintf(stderr, "Received incomplete CAN frame\n");
-        return -1;
-    } else {
-        printf("Received CAN frame: ID=0x%X DLC=%d Data=", response_frame.can_id, response_frame.len);
-        for (int i = 0; i < response_frame.len; i++) {
-            printf("%02X ", response_frame.data[i]);
-        }
-        printf("\n");
-    }
+    // End the timer
+    auto end_time = std::chrono::high_resolution_clock::now();
+
+    // Calculate the time elapsed and messages per second
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count();
+    double seconds = duration / 1e6;
+    double messages_per_second = iterations / seconds;
+
+    std::cout << "Elapsed time: " << seconds << " seconds" << std::endl;
+    std::cout << "Messages per second: " << messages_per_second << std::endl;
+
 
     // Close the socket
     close(s);
