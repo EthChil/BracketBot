@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+service Beaglebone {
+  rpc Beagle(Jetson_to_beagle) returns (Logging_Packet) {}
+}
+
+message Jetson_to_beagle {
+    uint32 keyboard_cmd = 1;
+    repeated float xf = 2;
+}
+
+message Logging_Packet {
+    repeated Logging logs = 1;
+}
+
+message Logging {
+    float time = 1;
+
+    float x_ego = 2;
+    float y_ego = 3;
+    float theta_ego = 4;
+    float moteus1_current_position = 5;
+    float moteus2_current_position = 6;
+    float moteus1_current_velocity = 7;
+    float moteus2_current_velocity = 8;
+    float moteus1_torque_reading = 9;
+    float moteus2_torque_reading = 10;
+    float moteus1_torque_command = 11;
+    float moteus2_torque_command = 12;
+    float dt_moteus_control = 13;
+    float pitch_angle85 = 14;
+    float yaw_angle85 = 15;
+    float pitch_rate85 = 16;
+    float yaw_rate85 = 17;
+    float pitch_rate85_ewa = 18;
+    float yaw_rate85_ewa = 19;
+    float dt_imu85_process = 20;
+    float dt_logging_process = 21;
+    
+    float z_position = 22;
+    float z_velocity = 23;
+    float z_pitch_angle = 24;
+    float z_pitch_rate = 25;
+    float z_yaw_angle = 26;
+    float z_yaw_rate = 27;
+    
+    float x_position = 28;
+    float x_velocity = 29;
+    float x_pitch_angle = 30;
+    float x_pitch_rate = 31;
+    float x_yaw_angle = 32;
+    float x_yaw_rate = 33;
+}
