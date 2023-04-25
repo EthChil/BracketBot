@@ -4,6 +4,7 @@
 
 #include "./I2CDevice.h"
 
+
 namespace abI2C {
 
     I2CDevice::I2CDevice( ) {

@@ -1,6 +1,16 @@
 #include "Lib/I2C/I2CDevice.h"
 #include <cmath>      // Include for sqrt and atan2
 #include <math.h>     // Include for M_PI
+#include <iostream>
+
+#include <chrono>
+
+float getCurrentTime() {
+    static const auto start_time = std::chrono::steady_clock::now();
+    auto now = std::chrono::steady_clock::now();
+    auto duration = now - start_time;
+    return std::chrono::duration_cast<std::chrono::microseconds>(duration).count()/1000000.0F;
+}
 
 constexpr float ACCEL_SENSITIVITY = 0.000061; // g/LSB (±2g)
 constexpr float GYRO_SENSITIVITY = 0.00875;    // dps/LSB (±245 dps)
@@ -89,14 +99,16 @@ void ReadAccelGyro(LSM9DS1_Accelerometer_Gyroscope &sensor) {
 
     if (status_reg & 0x01) { // Bit 0 (XLDA) is set
         sensor.readAccelerometer();
+        std::cout << "accel read" << std::endl;
     }
 
     if (status_reg & 0x02) { // Bit 1 (GDA) is set
         sensor.readGyroscope();
+        std::cout << "gyro read" << std::endl;
     }
 }
 
-void CalculateYawPitchRoll(const LSM9DS1_Accelerometer_Gyroscope &sensor, float &pitch, float &roll, float &yaw) {
+void CalculateYawPitchRoll(const LSM9DS1_Accelerometer_Gyroscope &sensor, float &pitch, float &roll, float &yaw, float delta_t) {
     float ax = sensor.getAccelX();
     float ay = sensor.getAccelY();
     float az = sensor.getAccelZ();
@@ -110,7 +122,7 @@ void CalculateYawPitchRoll(const LSM9DS1_Accelerometer_Gyroscope &sensor, float 
     roll = atan2(-ax, sqrt(ay * ay + az * az)) * 180.0 / M_PI;
 
     // Integrate the gyroscope data to calculate the yaw
-    yaw += gz * 0.01; // Assuming 0.01s loop time, adjust this value based on your actual loop time
+    yaw += gz * delta_t; // Use delta_t for the yaw calculation
 }
 
 int main( void ) {
@@ -140,14 +152,19 @@ int main( void ) {
     float yaw = 0;
 
 
+    double prev_time = 0.0;
     while (true) {
+        double curr_time = getCurrentTime(); // Replace with function to get current time
+        double delta_tony = curr_time - prev_time;
+        prev_time = curr_time;
+
 
         ReadAccelGyro(acc_gyro);
+        CalculateYawPitchRoll(acc_gyro, pitch, roll, yaw, delta_tony);
 
-        CalculateYawPitchRoll(acc_gyro, pitch, roll, yaw);
+        printf("Yaw: %f, Pitch: %f, Roll: %f, Time: %f\n", yaw, pitch, roll, delta_tony);
 
-        printf("Yaw: %f, Pitch: %f, Roll: %f\n", yaw, pitch, roll);
-        usleep(10000);
+        usleep(100);
     }
 
 }
