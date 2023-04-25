@@ -44,29 +44,32 @@ public:
         this->BusId = busId;
     }
 
-    int16_t GetValueFromRegister16(uint8_t low_reg, uint8_t high_reg) {
-        uint16_t high_byte = static_cast<uint16_t>(GetValueFromRegister(high_reg));
-        uint16_t low_byte = static_cast<uint16_t>(GetValueFromRegister(low_reg));
-        uint16_t combined = (high_byte << 8) | low_byte;
-        return static_cast<int16_t>(combined);
-    }
+    // int16_t GetValueFromRegister16(uint8_t low_reg, uint8_t high_reg) {
+    //     uint16_t high_byte = static_cast<uint16_t>(GetValueFromRegister(high_reg));
+    //     uint16_t low_byte = static_cast<uint16_t>(GetValueFromRegister(low_reg));
+    //     uint16_t combined = (high_byte << 8) | low_byte;
+    //     return static_cast<int16_t>(combined);
+    // }
 
     
     void readAccelerometer() {
-        accelX = GetValueFromRegister16(0x28, 0x29) * ACCEL_SENSITIVITY;
-        accelY = GetValueFromRegister16(0x2A, 0x2B) * ACCEL_SENSITIVITY;
-        accelZ = GetValueFromRegister16(0x2C, 0x2D) * ACCEL_SENSITIVITY;
-        // Print raw accelerometer data
-        // std::cout << "Raw Accel Data: X=" << accelX << " Y=" << accelY << " Z=" << accelZ << std::endl;
+        short values[6];
+        GetValuesFromRegisters(0x28, values, 6);
+        
+        accelX = static_cast<int16_t>((values[1] << 8) | values[0]) * ACCEL_SENSITIVITY;
+        accelY = static_cast<int16_t>((values[3] << 8) | values[2]) * ACCEL_SENSITIVITY;
+        accelZ = static_cast<int16_t>((values[5] << 8) | values[4]) * ACCEL_SENSITIVITY;
     }
 
     void readGyroscope() {
-        gyroX = GetValueFromRegister16(0x18, 0x19) * GYRO_SENSITIVITY;
-        gyroY = GetValueFromRegister16(0x1A, 0x1B) * GYRO_SENSITIVITY;
-        gyroZ = GetValueFromRegister16(0x1C, 0x1D) * GYRO_SENSITIVITY;
-        // Print raw gyroscope data
-        // std::cout << "Raw Gyro Data: X=" << gyroX << " Y=" << gyroY << " Z=" << gyroZ << std::endl;
+        short values[6];
+        GetValuesFromRegisters(0x18, values, 6);
+        
+        gyroX = static_cast<int16_t>((values[1] << 8) | values[0]) * GYRO_SENSITIVITY;
+        gyroY = static_cast<int16_t>((values[3] << 8) | values[2]) * GYRO_SENSITIVITY;
+        gyroZ = static_cast<int16_t>((values[5] << 8) | values[4]) * GYRO_SENSITIVITY;
     }
+
 
 
 

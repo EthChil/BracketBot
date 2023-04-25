@@ -57,6 +57,8 @@ namespace abI2C {
          */
         short GetValueFromRegister( unsigned char _RegisterAddress );
 
+        void GetValuesFromRegisters(unsigned char startRegisterAddress, short* values, size_t numRegisters);
+
         /**
          \fn Public SetRegisterValue
          \param unsigned char _RegisterValue

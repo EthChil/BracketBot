@@ -92,6 +92,29 @@ namespace abI2C {
         }
     }
 
+    void I2CDevice::GetValuesFromRegisters(unsigned char startRegisterAddress, short* values, size_t numRegisters) {
+        if (!this->DeviceInitialised) throw I2CSetupException("I2C Device Not Initialised ( try : 'obj->InitDevice()' )");
+        
+        this->SetRegisterAddress(startRegisterAddress | 0x80); // Set MSB to enable auto-increment
+        this->WriteBufferOnly[0] = this->RegisterAddress;
+        
+        if (write(this->GetDeviceFileHandle(), this->WriteBufferOnly, 1) == 1) {
+            uint8_t readBuffer[numRegisters];
+            if (read(this->GetDeviceFileHandle(), readBuffer, numRegisters) == numRegisters) {
+                for (size_t i = 0; i < numRegisters; i++) {
+                    values[i] = readBuffer[i];
+                }
+            } else {
+                snprintf(this->ErrMessage, sizeof(this->ErrMessage), "Fatal I2C Error - Unable to read from file : %s", this->GetFilePath());
+                throw I2CSetupException(this->ErrMessage);
+            }
+        } else {
+            snprintf(this->ErrMessage, sizeof(this->ErrMessage), "Fatal I2C Error - Unable to write to file : %s", this->GetFilePath());
+            throw I2CSetupException(this->ErrMessage);
+        }
+    }
+
+
     short I2CDevice::ReadDevice( size_t _BufferSize ) throw( I2CSetupException& ) {
         if(!this->DeviceInitialised) throw I2CSetupException( "I2C Device Not Initialised ( try : 'obj->InitDevice()' )" );
         unsigned char buff[ _BufferSize ];
