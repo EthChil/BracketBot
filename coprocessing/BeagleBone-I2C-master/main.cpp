@@ -2,6 +2,8 @@
 #include <cmath>      // Include for sqrt and atan2
 #include <math.h>     // Include for M_PI
 #include <iostream>
+#include <tuple>     // Include for std::tuple
+
 
 #include <chrono>
 
@@ -70,9 +72,6 @@ public:
         gyroZ = static_cast<int16_t>((values[5] << 8) | values[4]) * GYRO_SENSITIVITY;
     }
 
-
-
-
     // Mark accessor functions as const
     double getAccelX() const { return accelX; }
     double getAccelY() const { return accelY; }
@@ -92,6 +91,8 @@ public:
 
 };
 
+
+
 /*
  * Test I2C functionality
  * Prints a short (16 bits) with the current X reading from the accelerometer.
@@ -102,12 +103,12 @@ void ReadAccelGyro(LSM9DS1_Accelerometer_Gyroscope &sensor) {
 
     if (status_reg & 0x01) { // Bit 0 (XLDA) is set
         sensor.readAccelerometer();
-        std::cout << "accel read" << std::endl;
+        // std::cout << "accel read" << std::endl;
     }
 
     if (status_reg & 0x02) { // Bit 1 (GDA) is set
         sensor.readGyroscope();
-        std::cout << "gyro read" << std::endl;
+        // std::cout << "gyro read" << std::endl;
     }
 }
 
@@ -154,20 +155,31 @@ int main( void ) {
     float roll = 0;
     float yaw = 0;
 
+    double delta_tony = 0;
+    double curr_time = 0;
+
 
     double prev_time = 0.0;
+    double loop_time_target = 2e3; // 2 milliseconds in microseconds
+
     while (true) {
-        double curr_time = getCurrentTime(); // Replace with function to get current time
-        double delta_tony = curr_time - prev_time;
-        prev_time = curr_time;
-
-
+        curr_time = getCurrentTime(); // Replace with function to get current time
+        delta_tony = curr_time - prev_time;
+        
         ReadAccelGyro(acc_gyro);
         CalculateYawPitchRoll(acc_gyro, pitch, roll, yaw, delta_tony);
+        
+        printf("Pitch: %f, Yaw: %f, Pitch Rate: %f, Yaw Rate: %f, Delta Time: %f\n", pitch, yaw, acc_gyro.getGyroY(),acc_gyro.getGyroZ(), delta_tony);
 
-        printf("Yaw: %f, Pitch: %f, Roll: %f, Time: %f\n", yaw, pitch, roll, delta_tony);
+        prev_time = curr_time;
+        curr_time = getCurrentTime(); // Replace with function to get current time
+        double elapsed_time = (curr_time - prev_time) * 1000000.0; // Time elapsed since the start of the loop, in microseconds
 
-        usleep(100);
+        double sleep_duration = loop_time_target - elapsed_time;
+
+        if (sleep_duration > 0) {
+            usleep(static_cast<useconds_t>(sleep_duration));
+        }
+
     }
-
 }
