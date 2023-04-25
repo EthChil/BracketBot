@@ -11,6 +11,18 @@
 #include <libsocketcan.h>
 #include <chrono>
 
+#include "moteus_protocol.h"
+
+//build command
+//g++ canfdtest.cpp -I. -lsocketcan -o send_can_message
+
+mjbots::moteus::CanFrame ConvertToMoteusCanFrame(const canfd_frame& input_frame) {
+    mjbots::moteus::CanFrame output_frame;
+    output_frame.size = input_frame.len;
+    std::memcpy(output_frame.data, input_frame.data, input_frame.len);
+    return output_frame;
+}
+
 
 int main()
 {
@@ -84,19 +96,65 @@ int main()
 
         // Receive the response CAN frame
         int nbytes = read(s, &response_frame, sizeof(response_frame));
-        if (nbytes < 0) {
-            perror("Error receiving CAN frame");
-            return -1;
-        } else if (nbytes < (int)sizeof(struct canfd_frame)) {
-            fprintf(stderr, "Received incomplete CAN frame\n");
-            return -1;  
-        } else {
-            printf("Received CAN frame: ID=0x%X DLC=%d Data=", response_frame.can_id, response_frame.len);
-            for (int i = 0; i < response_frame.len; i++) {
-                printf("%02X ", response_frame.data[i]);
+
+
+        // Convert the response_frame to a Moteus CanFrame
+        mjbots::moteus::CanFrame moteus_response_frame = ConvertToMoteusCanFrame(response_frame);
+
+        // Create a parser with the Moteus CanFrame
+        mjbots::moteus::MultiplexParser parser(&moteus_response_frame);
+
+
+        while (true) {
+            auto [valid, reg, res] = parser.next();
+            if (!valid) {
+                break;
             }
-            printf("\n");
+
+            // Here, you'll need to call the appropriate decoding method based on the register.
+            // For example, assuming register 1 corresponds to position, 2 corresponds to velocity, and 3 corresponds to torque:
+            switch (reg) {
+                case 1: {  // Position
+                double position = parser.ReadPosition(res);
+                std::cout << "Position: " << position << std::endl;
+                break;
+                }
+                case 2: {  // Velocity
+                double velocity = parser.ReadVelocity(res);
+                std::cout << "Velocity: " << velocity << std::endl;
+                break;
+                }
+                case 3: {  // Torque
+                double torque = parser.ReadTorque(res);
+                std::cout << "Torque: " << torque << std::endl;
+                break;
+                }
+                default: {
+                std::cout << "Unknown register: " << reg << std::endl;
+                break;
+                }
+            }
         }
+
+
+
+
+
+
+
+        // if (nbytes < 0) {
+        //     perror("Error receiving CAN frame");
+        //     return -1;
+        // } else if (nbytes < (int)sizeof(struct canfd_frame)) {
+        //     fprintf(stderr, "Received incomplete CAN frame\n");
+        //     return -1;  
+        // } else {
+        //     printf("Received CAN frame: ID=0x%X DLC=%d Data=", response_frame.can_id, response_frame.len);
+        //     for (int i = 0; i < response_frame.len; i++) {
+        //         printf("%02X ", response_frame.data[i]);
+        //     }
+        //     printf("\n");
+        // }
     }
 
     // End the timer
