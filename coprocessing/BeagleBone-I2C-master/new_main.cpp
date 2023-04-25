@@ -1,13 +1,28 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
-
-#include "Lib/I2C/I2CDevice.h"
+#include <mutex>
 #include <cmath>      // Include for sqrt and atan2
 #include <math.h>     // Include for M_PI
-#include <tuple>     // Include for std::tuple
+#include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <net/if.h>
+#include <linux/can.h>
+#include <linux/can/raw.h>
+#include <libsocketcan.h>
+
+#include "moteus_protocol.h"
+#include "Lib/I2C/I2CDevice.h"
+
 
 //We will run the IMU at 500hz and the moteus at 200hz
+
+//build command:
+// g++ new_main.cpp -pthread -I. -lsocketcan Lib/I2C/I2CDevice.cpp -o mainprogram -std=c++11
 
 float getCurrentTime() {
     static const auto start_time = std::chrono::steady_clock::now();
@@ -128,28 +143,164 @@ public:
 };
 
 
+struct SharedData {
+    double pitch;
+    double yaw;
+    double pitchRate;
+    double yawRate;
+
+    std::mutex mtx;  // Mutex to protect access to the shared data
+};
+
+mjbots::moteus::CanFrame ConvertToMoteusCanFrame(const canfd_frame& input_frame) {
+    mjbots::moteus::CanFrame output_frame;
+    output_frame.size = input_frame.len;
+    std::memcpy(output_frame.data, input_frame.data, input_frame.len);
+    return output_frame;
+}
+
+void read_imu(SharedData& data) {
+
+    LSM9DS1_Accelerometer_Gyroscope acc_gyro(0x6b, 2);
+    acc_gyro.initializeAccelGyro();
+
+    float pitch = 0;
+    float roll = 0;
+    float yaw = 0;
+
+    double delta_tony = 0;
+    double curr_time = 0;
 
 
-
-void read_imu() {
     while (true) {
-        // Read IMU data here
-        std::cout << "Reading IMU data..." << std::endl;
-        std::this_thread::sleep_for(std::chrono::milliseconds(10)); // Adjust the sleep time based on the required IMU update rate
+        std::unique_lock<std::mutex> lock(data.mtx);
+
+        acc_gyro.ReadAccelGyro();
+        acc_gyro.CalculateYawPitchRoll(pitch, roll, yaw, delta_tony);
+
+        data.pitch = acc_gyro.getPitch();
+        data.yaw = acc_gyro.getYaw();
+        data.pitchRate = acc_gyro.getGyroY();
+        data.yawRate = acc_gyro.getGyroZ();
+
+        std::cout << "Reading IMU data: " << data.pitch << std::endl;
+        lock.unlock();
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // Adjust the sleep time based on the required IMU update rate
     }
 }
 
-void send_moteus_commands() {
+void parse_pvt(mjbots::moteus::MultiplexParser &parser){
+         while (true) {
+            auto [valid, reg, res] = parser.next();
+            if (!valid) {
+                break;
+            }
+
+            // Here, you'll need to call the appropriate decoding method based on the register.
+            // For example, assuming register 1 corresponds to position, 2 corresponds to velocity, and 3 corresponds to torque:
+            switch (reg) {
+                case 1: {  // Position
+                double position = parser.ReadPosition(res);
+                std::cout << "Position: " << position << std::endl;
+                break;
+                }
+                case 2: {  // Velocity
+                double velocity = parser.ReadVelocity(res);
+                std::cout << "Velocity: " << velocity << std::endl;
+                break;
+                }
+                case 3: {  // Torque
+                double torque = parser.ReadTorque(res);
+                std::cout << "Torque: " << torque << std::endl;
+                break;
+                }
+                default: {
+                std::cout << "Unknown register: " << reg << std::endl;
+                break;
+                }
+            }
+        }
+    }
+
+
+
+void send_moteus_commands(SharedData& data) {
+
+
+    // ----- INITIALIZE
+    int s;
+    struct sockaddr_can addr;
+    struct ifreq ifr;
+    struct canfd_frame read_pvt_frame; //frame predefined for reading position, velocity, and torque
+    struct canfd_frame response_frame;
+
+    s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
+    if (s < 0) {
+        perror("Error opening socket");
+        // return -1;
+    }
+
+    int enable_canfd = 1;
+    setsockopt(s, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &enable_canfd, sizeof(enable_canfd));
+    
+    strcpy(ifr.ifr_name, "vcan0");
+    if (ioctl(s, SIOCGIFINDEX, &ifr) < 0) {
+        perror("Error getting interface index");
+        // return -1;
+    }
+
+    addr.can_family = AF_CAN;
+    addr.can_ifindex = ifr.ifr_ifindex;
+
+    if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+        perror("Error binding socket");
+        // return -1;
+    }
+    // -------- END INITIALIZE
+
+    //query position, velocity, and torque
+    read_pvt_frame.can_id = 0x8001 | CAN_EFF_FLAG; // CAN ID (Extended format)
+    read_pvt_frame.flags = CANFD_ESI | CANFD_BRS;  // Use CAN FD flags
+    read_pvt_frame.len = 3;                         // Length of data (3 bytes)
+    read_pvt_frame.data[0] = 0x14;                 // Read int16 registers
+    read_pvt_frame.data[1] = 0x03;                 // Number of registers to read (3 registers: Position and Velocity)
+    read_pvt_frame.data[2] = 0x001;  
+
+    // Initial PVT frame
+    write(s, &read_pvt_frame, sizeof(read_pvt_frame));
+    int nbytes = read(s, &response_frame, sizeof(response_frame));
+
+    mjbots::moteus::CanFrame moteus_response_frame = ConvertToMoteusCanFrame(response_frame);
+    mjbots::moteus::MultiplexParser parser(&moteus_response_frame);
+
+
+
     while (true) {
-        // Send Moteus commands here
-        std::cout << "Sending Moteus commands..." << std::endl;
-        std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Adjust the sleep time based on the required Moteus command rate
+        std::unique_lock<std::mutex> lock(data.mtx);
+
+         // Initial PVT frame
+        write(s, &read_pvt_frame, sizeof(read_pvt_frame));
+        int nbytes = read(s, &response_frame, sizeof(response_frame));
+
+        mjbots::moteus::CanFrame moteus_response_frame = ConvertToMoteusCanFrame(response_frame);
+        mjbots::moteus::MultiplexParser parser(&moteus_response_frame);
+
+        parse_pvt(parser);
+
+
+        std::cout << "Sending Moteus command with IMU data: " << data.pitch << std::endl;
+        lock.unlock();
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // Adjust the sleep time based on the required Moteus command rate
     }
 }
 
 int main() {
-    std::thread imu_thread(read_imu);
-    std::thread moteus_thread(send_moteus_commands);
+    SharedData data;
+
+    std::thread imu_thread(read_imu, std::ref(data));
+    std::thread moteus_thread(send_moteus_commands, std::ref(data));
 
     imu_thread.join();
     moteus_thread.join();

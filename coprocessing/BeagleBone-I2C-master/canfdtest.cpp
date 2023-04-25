@@ -32,19 +32,15 @@ int main()
     struct canfd_frame frame;
     struct canfd_frame response_frame;
 
-    // Set up a raw CAN socket for CAN FD frames
     s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
     if (s < 0) {
         perror("Error opening socket");
         return -1;
     }
 
-    // Enable CAN FD support on the socket
     int enable_canfd = 1;
     setsockopt(s, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &enable_canfd, sizeof(enable_canfd));
     
-
-    // Set the interface name (vcan0)
     strcpy(ifr.ifr_name, "vcan0");
     if (ioctl(s, SIOCGIFINDEX, &ifr) < 0) {
         perror("Error getting interface index");
@@ -137,25 +133,6 @@ int main()
             // }
         }
 
-
-
-
-
-
-
-        // if (nbytes < 0) {
-        //     perror("Error receiving CAN frame");
-        //     return -1;
-        // } else if (nbytes < (int)sizeof(struct canfd_frame)) {
-        //     fprintf(stderr, "Received incomplete CAN frame\n");
-        //     return -1;  
-        // } else {
-        //     printf("Received CAN frame: ID=0x%X DLC=%d Data=", response_frame.can_id, response_frame.len);
-        //     for (int i = 0; i < response_frame.len; i++) {
-        //         printf("%02X ", response_frame.data[i]);
-        //     }
-        //     printf("\n");
-        // }
     }
 
     // End the timer

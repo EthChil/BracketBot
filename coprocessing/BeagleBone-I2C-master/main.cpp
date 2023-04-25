@@ -150,6 +150,9 @@ int main( void ) {
     double prev_time = 0.0;
     double loop_time_target = 2e3; // 2 milliseconds in microseconds
 
+    int counter = 0;
+    int print_interval = 100;
+
     while (true) {
         curr_time = getCurrentTime(); // Replace with function to get current time
         delta_tony = curr_time - prev_time;
@@ -158,8 +161,12 @@ int main( void ) {
         acc_gyro.ReadAccelGyro();
         acc_gyro.CalculateYawPitchRoll(pitch, roll, yaw, delta_tony);
         
+        counter++;
+        if (counter >= print_interval) {
+            printf("Pitch: %f, Yaw: %f, Pitch Rate: %f, Yaw Rate: %f, Delta Time: %f\n", pitch, yaw, acc_gyro.getGyroY(), acc_gyro.getGyroZ(), delta_tony);
+            counter = 0;
+        }
         
-        printf("Pitch: %f, Yaw: %f, Pitch Rate: %f, Yaw Rate: %f, Delta Time: %f\n", pitch, yaw, acc_gyro.getGyroY(),acc_gyro.getGyroZ(), delta_tony);
 
         prev_time = curr_time;
         curr_time = getCurrentTime(); // Replace with function to get current time
