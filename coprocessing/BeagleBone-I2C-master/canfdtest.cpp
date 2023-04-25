@@ -42,6 +42,7 @@ int main()
     // Enable CAN FD support on the socket
     int enable_canfd = 1;
     setsockopt(s, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &enable_canfd, sizeof(enable_canfd));
+    
 
     // Set the interface name (vcan0)
     strcpy(ifr.ifr_name, "vcan0");
@@ -111,29 +112,29 @@ int main()
                 break;
             }
 
-            // Here, you'll need to call the appropriate decoding method based on the register.
-            // For example, assuming register 1 corresponds to position, 2 corresponds to velocity, and 3 corresponds to torque:
-            switch (reg) {
-                case 1: {  // Position
-                double position = parser.ReadPosition(res);
-                std::cout << "Position: " << position << std::endl;
-                break;
-                }
-                case 2: {  // Velocity
-                double velocity = parser.ReadVelocity(res);
-                std::cout << "Velocity: " << velocity << std::endl;
-                break;
-                }
-                case 3: {  // Torque
-                double torque = parser.ReadTorque(res);
-                std::cout << "Torque: " << torque << std::endl;
-                break;
-                }
-                default: {
-                std::cout << "Unknown register: " << reg << std::endl;
-                break;
-                }
-            }
+            // // Here, you'll need to call the appropriate decoding method based on the register.
+            // // For example, assuming register 1 corresponds to position, 2 corresponds to velocity, and 3 corresponds to torque:
+            // switch (reg) {
+            //     case 1: {  // Position
+            //     double position = parser.ReadPosition(res);
+            //     std::cout << "Position: " << position << std::endl;
+            //     break;
+            //     }
+            //     case 2: {  // Velocity
+            //     double velocity = parser.ReadVelocity(res);
+            //     std::cout << "Velocity: " << velocity << std::endl;
+            //     break;
+            //     }
+            //     case 3: {  // Torque
+            //     double torque = parser.ReadTorque(res);
+            //     std::cout << "Torque: " << torque << std::endl;
+            //     break;
+            //     }
+            //     default: {
+            //     std::cout << "Unknown register: " << reg << std::endl;
+            //     break;
+            //     }
+            // }
         }
 
 
