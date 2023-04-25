@@ -1,13 +1,13 @@
+#include <iostream>
+#include <thread>
+#include <chrono>
+
 #include "Lib/I2C/I2CDevice.h"
 #include <cmath>      // Include for sqrt and atan2
 #include <math.h>     // Include for M_PI
-#include <iostream>
 #include <tuple>     // Include for std::tuple
-#include <chrono>
 
-//build command:
-// g++ main.cpp Lib/I2C/I2CDevice.cpp -o i2c_test -std=c++11
-
+//We will run the IMU at 500hz and the moteus at 200hz
 
 float getCurrentTime() {
     static const auto start_time = std::chrono::steady_clock::now();
@@ -19,10 +19,6 @@ float getCurrentTime() {
 constexpr float ACCEL_SENSITIVITY = 0.000061; // g/LSB (±2g)
 constexpr float GYRO_SENSITIVITY = 0.00875;    // dps/LSB (±245 dps)
 
-
-/*
- * Simplest implementation of a usable class extending an I2C device
- */
 class LSM9DS1_Base : public abI2C::I2CDevice {
 public:
     LSM9DS1_Base( unsigned char deviceAddress, unsigned int busId ) {
@@ -131,45 +127,32 @@ public:
 
 };
 
-int main( void ) {
-
-    using namespace abI2C;
-
-    LSM9DS1_Accelerometer_Gyroscope acc_gyro(0x6b, 2);
-    acc_gyro.initializeAccelGyro();
 
 
-    float pitch = 0;
-    float roll = 0;
-    float yaw = 0;
-
-    double delta_tony = 0;
-    double curr_time = 0;
 
 
-    double prev_time = 0.0;
-    double loop_time_target = 2e3; // 2 milliseconds in microseconds
-
+void read_imu() {
     while (true) {
-        curr_time = getCurrentTime(); // Replace with function to get current time
-        delta_tony = curr_time - prev_time;
-
-
-        acc_gyro.ReadAccelGyro();
-        acc_gyro.CalculateYawPitchRoll(pitch, roll, yaw, delta_tony);
-        
-        
-        printf("Pitch: %f, Yaw: %f, Pitch Rate: %f, Yaw Rate: %f, Delta Time: %f\n", pitch, yaw, acc_gyro.getGyroY(),acc_gyro.getGyroZ(), delta_tony);
-
-        prev_time = curr_time;
-        curr_time = getCurrentTime(); // Replace with function to get current time
-        double elapsed_time = (curr_time - prev_time) * 1000000.0; // Time elapsed since the start of the loop, in microseconds
-
-        double sleep_duration = loop_time_target - elapsed_time;
-
-        if (sleep_duration > 0) {
-            usleep(static_cast<useconds_t>(sleep_duration));
-        }
-
+        // Read IMU data here
+        std::cout << "Reading IMU data..." << std::endl;
+        std::this_thread::sleep_for(std::chrono::milliseconds(10)); // Adjust the sleep time based on the required IMU update rate
     }
+}
+
+void send_moteus_commands() {
+    while (true) {
+        // Send Moteus commands here
+        std::cout << "Sending Moteus commands..." << std::endl;
+        std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Adjust the sleep time based on the required Moteus command rate
+    }
+}
+
+int main() {
+    std::thread imu_thread(read_imu);
+    std::thread moteus_thread(send_moteus_commands);
+
+    imu_thread.join();
+    moteus_thread.join();
+
+    return 0;
 }
