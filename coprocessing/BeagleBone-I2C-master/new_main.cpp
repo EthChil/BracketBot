@@ -14,6 +14,8 @@
 #include <linux/can.h>
 #include <linux/can/raw.h>
 #include <libsocketcan.h>
+#include <Eigen/Dense>
+
 
 #include "moteus_protocol.h"
 #include "Lib/I2C/I2CDevice.h"
@@ -190,50 +192,145 @@ void read_imu(SharedData& data) {
     }
 }
 
-void parse_pvt(mjbots::moteus::MultiplexParser &parser){
-         while (true) {
-            auto [valid, reg, res] = parser.next();
-            if (!valid) {
+
+// Update the parse_pvt function to take a ControllerData reference
+void parse_pvt(mjbots::moteus::MultiplexParser &parser, ControllerData &data) {
+    while (true) {
+        auto [valid, reg, res] = parser.next();
+        if (!valid) {
+            break;
+        }
+
+        switch (reg) {
+            case 1: {  // Position
+                data.position = parser.ReadPosition(res);
+                std::cout << "Position: " << data.position << std::endl;
                 break;
             }
-
-            // Here, you'll need to call the appropriate decoding method based on the register.
-            // For example, assuming register 1 corresponds to position, 2 corresponds to velocity, and 3 corresponds to torque:
-            switch (reg) {
-                case 1: {  // Position
-                double position = parser.ReadPosition(res);
-                std::cout << "Position: " << position << std::endl;
+            case 2: {  // Velocity
+                data.velocity = parser.ReadVelocity(res);
+                std::cout << "Velocity: " << data.velocity << std::endl;
                 break;
-                }
-                case 2: {  // Velocity
-                double velocity = parser.ReadVelocity(res);
-                std::cout << "Velocity: " << velocity << std::endl;
+            }
+            case 3: {  // Torque
+                data.torque = parser.ReadTorque(res);
+                std::cout << "Torque: " << data.torque << std::endl;
                 break;
-                }
-                case 3: {  // Torque
-                double torque = parser.ReadTorque(res);
-                std::cout << "Torque: " << torque << std::endl;
-                break;
-                }
-                default: {
+            }
+            default: {
                 std::cout << "Unknown register: " << reg << std::endl;
                 break;
-                }
             }
         }
     }
+}
 
 
+void update_position(double &x, double &y, double &theta, double d_left, double d_right) {
+    float W = 0.567
+
+    double distance_left = d_left;
+    double distance_right = d_right;
+
+    double distance_avg = (distance_left + distance_right) / 2;
+    double delta_theta = (distance_right - distance_left) / W;
+
+    x += distance_avg * std::cos(theta + delta_theta / 2);
+    y += distance_avg * std::sin(theta + delta_theta / 2);
+    theta += delta_theta;
+}
+
+void predict(Eigen::VectorXd &x, Eigen::MatrixXd &P, const Eigen::MatrixXd &F, const Eigen::MatrixXd &Q, const Eigen::VectorXd &u, const Eigen::MatrixXd &G) {
+    x = F * x + G * u;
+    P = F * P * F.transpose() + Q;
+}
+
+void update(Eigen::VectorXd &x, Eigen::MatrixXd &P, const Eigen::VectorXd &z, const Eigen::MatrixXd &R, const Eigen::MatrixXd &H) {
+    Eigen::VectorXd y = z - H * x;
+    Eigen::MatrixXd S = H * P * H.transpose() + R;
+    Eigen::MatrixXd K = P * H.transpose() * S.inverse();
+    x = x + K * y;
+    Eigen::MatrixXd KH = K * H;
+    Eigen::MatrixXd I_KH = Eigen::MatrixXd::Identity(KH.rows(), KH.cols()) - KH;
+    P = I_KH * P * I_KH.transpose() + K * R * K.transpose();
+}
+
+Eigen::MatrixXd read_matrix_from_file(const std::string& file_path, int rows, int cols) {
+    std::ifstream file(file_path);
+    std::vector<double> data;
+    std::string line;
+
+    if (file.is_open()) {
+        while (std::getline(file, line)) {
+            std::stringstream ss(line);
+            double value;
+            while (ss >> value) {
+                data.push_back(value);
+                if (ss.peek() == ',') {
+                    ss.ignore();
+                }
+            }
+        }
+        file.close();
+    } else {
+        std::cerr << "Unable to open file: " << file_path << std::endl;
+    }
+
+    Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> mat(data.data(), rows, cols);
+    return mat;
+}
+
+struct ControllerData {
+    double position;
+    double velocity;
+    double torque;
+};
 
 void send_moteus_commands(SharedData& data) {
 
+    struct ControllerData moteus1;
+    struct ControllerData moteus2;
 
-    // ----- INITIALIZE
+
+    // Set these
+    int moteus1_direction = -1;
+    int moteus2_direction = -1;
+
+
+    float t2m = 0.528;
+    int N = 6;
+
+    // ------- Kalman filter stuff
+    Eigen::MatrixXd A = read_matrix_from_file("./lqr_params/A.txt", N, N);
+    Eigen::VectorXd B = read_matrix_from_file("./lqr_params/B.txt", N, 1);
+    Eigen::MatrixXd C = Eigen::MatrixXd::Identity(N, N);
+    Eigen::MatrixXd Q_cov = read_matrix_from_file("./lqr_params/Q_cov.txt", N, N);
+    Eigen::MatrixXd P;
+
+    std::string p_file_path = "./lqr_params/P.txt";
+    if (std::ifstream(p_file_path).good()) {
+        P = read_matrix_from_file(p_file_path, N, N);
+    } else {
+        P = Eigen::MatrixXd::Identity(N, N) * 1e-6;
+    }
+
+    Eigen::MatrixXd H = C;
+    Eigen::MatrixXd R = Eigen::MatrixXd::Zero(N, N);
+    R.diagonal() << 1, 1e4, 1, 1e7, 1, 1e8;
+    R *= 1e-7;
+    Eigen::MatrixXd Q = Q_cov.block(0, 0, N, N);
+
+    // ------ End kalman filter stuff
+
+
+    // ----- INITIALIZE socket
     int s;
     struct sockaddr_can addr;
     struct ifreq ifr;
-    struct canfd_frame read_pvt_frame; //frame predefined for reading position, velocity, and torque
-    struct canfd_frame response_frame;
+    struct canfd_frame read_pvt_frame_moteus1; //frame predefined for reading position, velocity, and torque
+    struct canfd_frame read_pvt_frame_moteus2; //frame predefined for reading position, velocity, and torque
+    struct canfd_frame response_frame_moteus1;
+    struct canfd_frame response_frame_moteus2;
 
     s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
     if (s < 0) {
@@ -259,20 +356,47 @@ void send_moteus_commands(SharedData& data) {
     }
     // -------- END INITIALIZE
 
-    //query position, velocity, and torque
-    read_pvt_frame.can_id = 0x8001 | CAN_EFF_FLAG; // CAN ID (Extended format)
-    read_pvt_frame.flags = CANFD_ESI | CANFD_BRS;  // Use CAN FD flags
-    read_pvt_frame.len = 3;                         // Length of data (3 bytes)
-    read_pvt_frame.data[0] = 0x14;                 // Read int16 registers
-    read_pvt_frame.data[1] = 0x03;                 // Number of registers to read (3 registers: Position and Velocity)
-    read_pvt_frame.data[2] = 0x001;  
+    //Moteus 1 read frame
+    read_pvt_frame_moteus1.can_id = 0x8001 | CAN_EFF_FLAG; // CAN ID (Extended format)
+    read_pvt_frame_moteus1.flags = CANFD_ESI | CANFD_BRS;  // Use CAN FD flags
+    read_pvt_frame_moteus1.len = 3;                         // Length of data (3 bytes)
+    read_pvt_frame_moteus1.data[0] = 0x14;                 // Read int16 registers
+    read_pvt_frame_moteus1.data[1] = 0x03;                 // Number of registers to read (3 registers: Position and Velocity)
+    read_pvt_frame_moteus1.data[2] = 0x001;  
 
-    // Initial PVT frame
-    write(s, &read_pvt_frame, sizeof(read_pvt_frame));
-    int nbytes = read(s, &response_frame, sizeof(response_frame));
+    //Moteus 2 read frame
+    read_pvt_frame_moteus2.can_id = 0x8002 | CAN_EFF_FLAG; // CAN ID (Extended format)
+    read_pvt_frame_moteus2.flags = CANFD_ESI | CANFD_BRS;  // Use CAN FD flags
+    read_pvt_frame_moteus2.len = 3;                         // Length of data (3 bytes)
+    read_pvt_frame_moteus2.data[0] = 0x14;                 // Read int16 registers
+    read_pvt_frame_moteus2.data[1] = 0x03;                 // Number of registers to read (3 registers: Position and Velocity)
+    read_pvt_frame_moteus2.data[2] = 0x001;  
 
-    mjbots::moteus::CanFrame moteus_response_frame = ConvertToMoteusCanFrame(response_frame);
-    mjbots::moteus::MultiplexParser parser(&moteus_response_frame);
+
+    // INITAL READING
+    write(s, &read_pvt_frame_moteus1, sizeof(read_pvt_frame_moteus1));
+    int nbytes = read(s, &response_frame_moteus1, sizeof(response_frame_moteus1));
+
+    write(s, &read_pvt_frame_moteus2, sizeof(read_pvt_frame_moteus2));
+    int nbytes = read(s, &response_frame_moteus2, sizeof(response_frame_moteus2));
+
+    mjbots::moteus::CanFrame moteus_response_frame_moteus1 = ConvertToMoteusCanFrame(response_frame_moteus1);
+    mjbots::moteus::CanFrame moteus_response_frame_moteus2 = ConvertToMoteusCanFrame(response_frame_moteus2);
+
+    mjbots::moteus::MultiplexParser parser(&moteus_response_frame_moteus1);
+    mjbots::moteus::MultiplexParser parser(&moteus_response_frame_moteus2);
+
+
+    // Assuming you have m1state and m2state with values for position
+    double moteus1_initial_position = moteus_response_frame_moteus1.position * t2m * moteus1_direction;
+    double moteus2_initial_position = moteus_response_frame_moteus1.position * t2m * moteus2_direction;
+    double combined_initial_position = (moteus1_initial_position + moteus2_initial_position) / 2;
+
+    double moteus1_previous_position = 0;
+    double moteus2_previous_position = 0;
+    double moteus1_previous_torque_command = 0;
+    double moteus2_previous_torque_command = 0;
+    double x_ego = 0, y_ego = 0, theta_ego = 0;
 
 
 
