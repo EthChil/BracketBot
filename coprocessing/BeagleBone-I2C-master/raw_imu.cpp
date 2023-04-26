@@ -215,8 +215,8 @@ int main( void ) {
         mag.ReadMag();
         acc_gyro.GravityVectorToAngle(pitch, roll, yaw, delta_tony);
         
-        printf("Pitch: %f, Yaw: %f, Pitch Rate: %f, Yaw Rate: %f, Delta Time: %f\n", pitch, yaw, acc_gyro.getGyroY(),acc_gyro.getGyroZ(), delta_tony);
-        printf("Mag X: %f, Mag Y: %f, Mag Z: %f\n",mag.getMagX(), mag.getMagY(), mag.getMagZ());
+        printf("Pitch: %f, Yaw: %f, Roll: %f, Pitch Rate: %f, Yaw Rate: %f, Roll Rate: %f, Delta Time: %f\n", -roll, -yaw, pitch, acc_gyro.getGyroY(), -acc_gyro.getGyroZ(), acc_gyro.getGyroX(), delta_tony);
+        // printf("Mag X: %f, Mag Y: %f, Mag Z: %f\n",mag.getMagX(), mag.getMagY(), mag.getMagZ());
         prev_time = curr_time;
         curr_time = getCurrentTime(); // Replace with function to get current time
         double elapsed_time = (curr_time - prev_time) * 1000000.0; // Time elapsed since the start of the loop, in microseconds

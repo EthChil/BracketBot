@@ -15,6 +15,11 @@
 #include <linux/can/raw.h>
 #include <libsocketcan.h>
 #include <Eigen/Dense>
+#include <condition_variable>
+#include <vector>
+#include <array>
+#include <fstream>
+
 
 
 #include "moteus_protocol.h"
@@ -24,7 +29,7 @@
 //We will run the IMU at 500hz and the moteus at 200hz
 
 //build command:
-// g++ new_main.cpp -pthread -I. -lsocketcan Lib/I2C/I2CDevice.cpp -o mainprogram -std=c++11
+// g++ new_main.cpp -pthread -I. -lsocketcan -I/usr/include/eigen3 Lib/I2C/I2CDevice.cpp -o mainprogram -std=c++11
 
 float getCurrentTime() {
     static const auto start_time = std::chrono::steady_clock::now();
@@ -104,7 +109,7 @@ public:
     }
 
     // Add the CalculateYawPitchRoll function
-    void CalculateYawPitchRoll(float &pitch, float &roll, float &yaw, float delta_t) const {
+    void CalculateYawPitchRoll(float &pitch, float &roll, float &yaw, float delta_time) const {
         float ax = getAccelX();
         float ay = getAccelY();
         float az = getAccelZ();
@@ -115,19 +120,21 @@ public:
 
         pitch = atan2(ay, sqrt(ax * ax + az * az)) * 180.0 / M_PI;
         roll = atan2(-ax, sqrt(ay * ay + az * az)) * 180.0 / M_PI;
-        yaw += gz * delta_t;
+        yaw += gz * delta_time;
     }
 
     // Mark accessor functions as const
     double getAccelX() const { return accelX; }
     double getAccelY() const { return accelY; }
     double getAccelZ() const { return accelZ; }
+
     double getGyroX() const { return gyroX; }
     double getGyroY() const { return gyroY; }
     double getGyroZ() const { return gyroZ; }
-    double getPitch() const { return gyroX; }
-    double getYaw() const { return gyroY; }
-    double getRoll() const { return gyroZ; }
+
+    double getPitch() const { return pitch; }
+    double getYaw() const { return yaw; }
+    double getRoll() const { return roll; }
 
     private:
     double accelX = 0.0;
@@ -144,6 +151,11 @@ public:
 
 };
 
+struct ControllerData {
+    double position;
+    double velocity;
+    double torque;
+};
 
 struct SharedData {
     double pitch;
@@ -152,6 +164,8 @@ struct SharedData {
     double yawRate;
 
     std::mutex mtx;  // Mutex to protect access to the shared data
+    std::condition_variable cv; // Condition variable to signal when the initial data is available
+    bool initialDataReady = false; // Flag to indicate if the initial data is ready
 };
 
 mjbots::moteus::CanFrame ConvertToMoteusCanFrame(const canfd_frame& input_frame) {
@@ -172,23 +186,38 @@ void read_imu(SharedData& data) {
 
     double delta_tony = 0;
     double curr_time = 0;
+    double prev_time = 0.0;
+
+    acc_gyro.ReadAccelGyro();
+    acc_gyro.CalculateYawPitchRoll(pitch, roll, yaw, delta_tony);
+
+    std::unique_lock<std::mutex> lock(data.mtx);
+
+    data.initialDataReady = true;
+    data.cv.notify_one(); // Signal that the initial data is ready
+    lock.unlock();
 
 
     while (true) {
-        std::unique_lock<std::mutex> lock(data.mtx);
+        curr_time = getCurrentTime(); // Replace with function to get current time
+        delta_tony = curr_time - prev_time;
+        prev_time = curr_time;
 
         acc_gyro.ReadAccelGyro();
         acc_gyro.CalculateYawPitchRoll(pitch, roll, yaw, delta_tony);
 
-        data.pitch = acc_gyro.getPitch();
-        data.yaw = acc_gyro.getYaw();
-        data.pitchRate = acc_gyro.getGyroY();
-        data.yawRate = acc_gyro.getGyroZ();
+        std::unique_lock<std::mutex> lock(data.mtx);
+        data.pitch = roll * M_PI / 180.0;
+        data.yaw = yaw * M_PI / 180.0;
+        data.pitchRate = acc_gyro.getGyroY() * M_PI / 180.0;
+        data.yawRate = acc_gyro.getGyroZ() * M_PI / 180.0;
 
-        std::cout << "Reading IMU data: " << data.pitch << std::endl;
-        lock.unlock();
+        std::cout << "pitch: " << data.pitch <<  "pitch: " << data.yaw << std::endl;
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // Adjust the sleep time based on the required IMU update rate
+        // lock.unlock(); //might be unnessary
+
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(10)); // Adjust the sleep time based on the required IMU update rate
     }
 }
 
@@ -204,17 +233,17 @@ void parse_pvt(mjbots::moteus::MultiplexParser &parser, ControllerData &data) {
         switch (reg) {
             case 1: {  // Position
                 data.position = parser.ReadPosition(res);
-                std::cout << "Position: " << data.position << std::endl;
+                // std::cout << "Position: " << data.position << std::endl;
                 break;
             }
             case 2: {  // Velocity
                 data.velocity = parser.ReadVelocity(res);
-                std::cout << "Velocity: " << data.velocity << std::endl;
+                // std::cout << "Velocity: " << data.velocity << std::endl;
                 break;
             }
             case 3: {  // Torque
                 data.torque = parser.ReadTorque(res);
-                std::cout << "Torque: " << data.torque << std::endl;
+                // std::cout << "Torque: " << data.torque << std::endl;
                 break;
             }
             default: {
@@ -226,8 +255,8 @@ void parse_pvt(mjbots::moteus::MultiplexParser &parser, ControllerData &data) {
 }
 
 
-void update_position(double &x, double &y, double &theta, double d_left, double d_right) {
-    float W = 0.567
+void update_position(float &x, float &y, float &theta, float d_left, float d_right) {
+    float W = 0.567;
 
     double distance_left = d_left;
     double distance_right = d_right;
@@ -280,16 +309,20 @@ Eigen::MatrixXd read_matrix_from_file(const std::string& file_path, int rows, in
     return mat;
 }
 
-struct ControllerData {
-    double position;
-    double velocity;
-    double torque;
-};
+
 
 void send_moteus_commands(SharedData& data) {
 
     struct ControllerData moteus1;
     struct ControllerData moteus2;
+
+    double pitch;
+    double yaw;
+    double pitchRate;
+    double yawRate;
+
+    float Cl = 0;
+    float Cr = 0;
 
 
     // Set these
@@ -375,48 +408,128 @@ void send_moteus_commands(SharedData& data) {
 
     // INITAL READING
     write(s, &read_pvt_frame_moteus1, sizeof(read_pvt_frame_moteus1));
-    int nbytes = read(s, &response_frame_moteus1, sizeof(response_frame_moteus1));
+    read(s, &response_frame_moteus1, sizeof(response_frame_moteus1));
 
     write(s, &read_pvt_frame_moteus2, sizeof(read_pvt_frame_moteus2));
-    int nbytes = read(s, &response_frame_moteus2, sizeof(response_frame_moteus2));
+    read(s, &response_frame_moteus2, sizeof(response_frame_moteus2));
 
     mjbots::moteus::CanFrame moteus_response_frame_moteus1 = ConvertToMoteusCanFrame(response_frame_moteus1);
     mjbots::moteus::CanFrame moteus_response_frame_moteus2 = ConvertToMoteusCanFrame(response_frame_moteus2);
 
-    mjbots::moteus::MultiplexParser parser(&moteus_response_frame_moteus1);
-    mjbots::moteus::MultiplexParser parser(&moteus_response_frame_moteus2);
+    mjbots::moteus::MultiplexParser parser1(&moteus_response_frame_moteus1);
+    parse_pvt(parser1, moteus1);
+
+    mjbots::moteus::MultiplexParser parser2(&moteus_response_frame_moteus2);
+    parse_pvt(parser2, moteus2);
 
 
     // Assuming you have m1state and m2state with values for position
-    double moteus1_initial_position = moteus_response_frame_moteus1.position * t2m * moteus1_direction;
-    double moteus2_initial_position = moteus_response_frame_moteus1.position * t2m * moteus2_direction;
-    double combined_initial_position = (moteus1_initial_position + moteus2_initial_position) / 2;
+    float moteus1_initial_position = moteus1.position * t2m * moteus1_direction;
+    float moteus2_initial_position = moteus2.position * t2m * moteus2_direction;
+    float combined_initial_position = (moteus1_initial_position + moteus2_initial_position) / 2;
 
-    double moteus1_previous_position = 0;
-    double moteus2_previous_position = 0;
-    double moteus1_previous_torque_command = 0;
-    double moteus2_previous_torque_command = 0;
-    double x_ego = 0, y_ego = 0, theta_ego = 0;
+    float moteus1_delta_position = 0;
+    float moteus2_delta_position = 0;
+    
+    float combined_current_position = 0;
+    float combined_current_velocity = 0;
 
+
+    float moteus1_previous_position = 0;
+    float moteus2_previous_position = 0;
+
+    float moteus1_previous_torque_command = 0;
+    float moteus2_previous_torque_command = 0;
+    float x_ego = 0, y_ego = 0, theta_ego = 0;
+
+
+    //get thie initial imu readings
+    std::unique_lock<std::mutex> lock(data.mtx);
+    data.cv.wait(lock, [&data] { return data.initialDataReady; });
+
+    pitch = -data.pitch;
+    yaw = -data.yaw;
+    pitchRate = data.pitchRate;
+    yawRate = -data.yawRate;
+
+    lock.unlock(); //might not need
+
+
+    Eigen::Matrix<double, 1, 6> x_hat;
+    x_hat << 0, 0, pitch, pitchRate, yaw, yawRate;
+
+    // Initialize U
+    Eigen::VectorXd U;
+
+
+    Eigen::Matrix<double, 2, 2> D;
+    D << 0.5,  0.5,
+         0.5, -0.5;
+
+    Eigen::Matrix<double, 2, 6> K;
+    K << -1.00, -2.43, -25.97, -12.60, -0.00, -0.00,
+         -0.00, -0.00, -0.00, -0.00,  1.00,  1.27;
+
+    Eigen::Matrix<double, 1, 6> Xf;
+    Xf << 0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
 
 
     while (true) {
-        std::unique_lock<std::mutex> lock(data.mtx);
 
          // Initial PVT frame
-        write(s, &read_pvt_frame, sizeof(read_pvt_frame));
-        int nbytes = read(s, &response_frame, sizeof(response_frame));
+        write(s, &read_pvt_frame_moteus1, sizeof(read_pvt_frame_moteus1));
+        read(s, &response_frame_moteus1, sizeof(response_frame_moteus1));
 
-        mjbots::moteus::CanFrame moteus_response_frame = ConvertToMoteusCanFrame(response_frame);
-        mjbots::moteus::MultiplexParser parser(&moteus_response_frame);
+        write(s, &read_pvt_frame_moteus2, sizeof(read_pvt_frame_moteus2));
+        read(s, &response_frame_moteus2, sizeof(response_frame_moteus2));
 
-        parse_pvt(parser);
+        mjbots::moteus::CanFrame moteus_response_frame_moteus1 = ConvertToMoteusCanFrame(response_frame_moteus1);
+        mjbots::moteus::CanFrame moteus_response_frame_moteus2 = ConvertToMoteusCanFrame(response_frame_moteus2);
+
+        mjbots::moteus::MultiplexParser parser1(&moteus_response_frame_moteus1);
+        parse_pvt(parser1, moteus1);
+        mjbots::moteus::MultiplexParser parser2(&moteus_response_frame_moteus2);
+        parse_pvt(parser2, moteus2);
+
+        std::unique_lock<std::mutex> lock(data.mtx);
+        pitch = -data.pitch;
+        yaw = -data.yaw;
+        pitchRate = data.pitchRate;
+        yawRate = -data.yawRate;
+        // lock.unlock(); //might not need
 
 
-        std::cout << "Sending Moteus command with IMU data: " << data.pitch << std::endl;
-        lock.unlock();
+        // MORE STUFF
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // Adjust the sleep time based on the required Moteus command rate
+        moteus1_delta_position = moteus1.position*t2m*moteus1_direction - moteus1_previous_position;
+        moteus2_delta_position = moteus2.position*t2m*moteus2_direction - moteus2_previous_position;
+
+        update_position(x_ego, y_ego, theta_ego, moteus1_delta_position, moteus2_delta_position);
+
+        combined_current_position = (moteus1.position*t2m + moteus2.position*t2m )/2.0 * moteus1_direction;
+        combined_current_velocity = (moteus1.velocity*t2m + moteus2.velocity*t2m )/2.0 * moteus2_direction;
+
+        x_hat[0] = combined_current_position;
+        x_hat[1] = combined_current_velocity;
+        x_hat[2] = pitch;
+        x_hat[3] = pitchRate;
+        x_hat[4] = yaw;
+        x_hat[5] = yawRate;
+
+        // Calculate U
+        U = -K * (x_hat - Xf).transpose();
+
+        // Calculate Cl and Cr
+        Eigen::Vector2d wheel_commands = D * U;
+        Cl = wheel_commands(0);
+        Cr = wheel_commands(1);
+
+        std::cout << "Position: " << combined_current_position << " Velocity: " << combined_current_velocity << " Pitch: " << pitch << " PitchRate: " << pitchRate << " Yaw: " << yaw << " YawRate: " << yawRate << " Cl: " << Cl << " Cr: " << Cr << std::endl;
+
+        moteus1_previous_position = moteus1.position*t2m*moteus1_direction;
+        moteus2_previous_position = moteus2.position*t2m*moteus2_direction;
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Adjust the sleep time based on the required Moteus command rate
     }
 }
 
