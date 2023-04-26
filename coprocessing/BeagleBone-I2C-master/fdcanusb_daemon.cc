@@ -9,6 +9,8 @@
 //  sudo ip link add name vcan0 type vcan
 //  sudo ip link set vcan0 up
 
+#include <unistd.h> // Make sure you include the unistd.h header for usleep
+
 
 #include <fcntl.h>
 #include <linux/can.h>
@@ -21,7 +23,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <syslog.h>
-#include <unistd.h>
+#include <unistd.h>`
 #include <termios.h>
 
 #include <cstdlib>
@@ -264,13 +266,19 @@ int main(int argc, char** argv) {
   struct canfd_frame recv_frame = {};
   std::ostringstream fdcanusb_buf;
   while (true) {
+    
     // Look for things to read from either interface, bridge them as
     // necessary.
     FD_ZERO(&rfds);
     FD_SET(socket, &rfds);
     FD_SET(fd, &rfds);
+
+  
     const int ret = ::select(
         std::max(fd, socket) + 1, &rfds, nullptr, nullptr, nullptr);
+
+  
+
     ErrorIf(ret < 0, "error in select");
 
     if (FD_ISSET(socket, &rfds)) {

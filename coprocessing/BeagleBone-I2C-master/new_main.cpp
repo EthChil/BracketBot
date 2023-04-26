@@ -198,6 +198,10 @@ void read_imu(SharedData& data) {
     lock.unlock();
 
 
+    int cycle_count = 0;
+    auto start = std::chrono::high_resolution_clock::now();
+    auto last_print_time = start;
+
     while (true) {
         curr_time = getCurrentTime(); // Replace with function to get current time
         delta_tony = curr_time - prev_time;
@@ -211,14 +215,22 @@ void read_imu(SharedData& data) {
         data.yaw = yaw * M_PI / 180.0;
         data.pitchRate = acc_gyro.getGyroY() * M_PI / 180.0;
         data.yawRate = acc_gyro.getGyroZ() * M_PI / 180.0;
+        lock.unlock(); //might be unnessary
 
-        std::cout << "pitch: " << data.pitch <<  "pitch: " << data.yaw << std::endl;
+        cycle_count++;
 
-        // lock.unlock(); //might be unnessary
+        auto now = std::chrono::high_resolution_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_print_time);
+        if (elapsed.count() >= 1000) {
+            std::cout << "IMU Cycles per second: " << cycle_count << std::endl;
+            cycle_count = 0;
+            last_print_time = now;
+        }
 
+        std::this_thread::sleep_for(std::chrono::microseconds(500));
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(10)); // Adjust the sleep time based on the required IMU update rate
     }
+
 }
 
 
@@ -473,6 +485,9 @@ void send_moteus_commands(SharedData& data) {
     Eigen::Matrix<double, 1, 6> Xf;
     Xf << 0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
 
+    int cycle_count = 0;
+    auto start = std::chrono::high_resolution_clock::now();
+    auto last_print_time = start;
 
     while (true) {
 
@@ -496,7 +511,7 @@ void send_moteus_commands(SharedData& data) {
         yaw = -data.yaw;
         pitchRate = data.pitchRate;
         yawRate = -data.yawRate;
-        // lock.unlock(); //might not need
+        lock.unlock(); //might not need
 
 
         // MORE STUFF
@@ -524,12 +539,22 @@ void send_moteus_commands(SharedData& data) {
         Cl = wheel_commands(0);
         Cr = wheel_commands(1);
 
-        std::cout << "Position: " << combined_current_position << " Velocity: " << combined_current_velocity << " Pitch: " << pitch << " PitchRate: " << pitchRate << " Yaw: " << yaw << " YawRate: " << yawRate << " Cl: " << Cl << " Cr: " << Cr << std::endl;
+        // std::cout << "Position: " << combined_current_position << " Velocity: " << combined_current_velocity << " Pitch: " << pitch << " PitchRate: " << pitchRate << " Yaw: " << yaw << " YawRate: " << yawRate << " Cl: " << Cl << " Cr: " << Cr << std::endl;
 
         moteus1_previous_position = moteus1.position*t2m*moteus1_direction;
         moteus2_previous_position = moteus2.position*t2m*moteus2_direction;
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Adjust the sleep time based on the required Moteus command rate
+        cycle_count++;
+
+        auto now = std::chrono::high_resolution_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_print_time);
+        if (elapsed.count() >= 1000) {
+            std::cout << "Moteus Cycles per second: " << cycle_count << std::endl;
+            cycle_count = 0;
+            last_print_time = now;
+        }
+
+        std::this_thread::sleep_for(std::chrono::microseconds(500)); // Adjust the sleep time based on the required Moteus command rate
     }
 }
 
