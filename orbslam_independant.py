@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
 
-import odrive
-from odrive.enums import *
-from odriveDriver import Axis
 
 from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import RANSACRegressor
@@ -19,9 +16,6 @@ import numpy as np
 import cv2
 import math
 
-odrv0 = odrive.find_any()
-axis0 = Axis(odrv0.axis0, dir=1)
-axis1 = Axis(odrv0.axis1, dir=-1)
 
 prefix = "orbslam_independant_files/"
 
@@ -53,16 +47,6 @@ def run_orbslam(vocab_path, settings_path):
     W = 0.567   # Distance between wheels in meters
     x, y, theta = 0, 0, 0
     
-    pos_init_a0 = axis0.get_pos_turns() * t2m
-    pos_a0_cur = axis0.get_pos_turns() * t2m - pos_init_a0
-    pos_a0_prev = pos_a0_cur
-    
-    pos_init_a1 = axis1.get_pos_turns() * t2m
-    pos_a1_cur = axis1.get_pos_turns() * t2m - pos_init_a1
-    pos_a1_prev = pos_a1_cur
-    
-    xs_ego, ys_ego, thetas_ego = [],[],[]
-    # END EGO MOTION
     
     start_time = time.time()
     times_track = []
@@ -85,21 +69,6 @@ def run_orbslam(vocab_path, settings_path):
         # mps = np.array(slam.get_tracked_mappoints())
         # kps = np.array(slam.get_tracked_keypoints())
         
-        pos_a0_cur = axis0.get_pos_turns() * t2m - pos_init_a0
-        pos_a1_cur = axis1.get_pos_turns() * t2m - pos_init_a1
-        pos_a0_delta = pos_a0_cur-pos_a0_prev
-        pos_a1_delta = pos_a1_cur-pos_a1_prev
-        x, y, theta = update_position(x, y, theta, pos_a0_delta, pos_a1_delta, W)
-        xs_ego.append([x, timestamp])
-        ys_ego.append([y, timestamp])
-        thetas_ego.append([theta, timestamp])
-        
-        np.save(prefix+"ego_xs.npy", xs_ego)
-        np.save(prefix+"ego_ys.npy", ys_ego)
-        np.save(prefix+"ego_thetas.npy", thetas_ego)
-        
-        pos_a0_prev = pos_a0_cur
-        pos_a1_prev = pos_a1_cur
 
         # if last_time < (cur_time+60) and cur_time>(start_time+300): #only run this every 10 seconds
         #     if mps.size > 0 and kps.size > 0:

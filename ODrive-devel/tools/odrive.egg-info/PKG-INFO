@@ -1,0 +1,11 @@
+Metadata-Version: 1.0
+Name: odrive
+Version: 0.0.0
+Summary: Control utilities for the ODrive high performance motor controller
+Home-page: https://github.com/odriverobotics/ODrive
+Author: Oskar Weigl
+Author-email: oskar.weigl@odriverobotics.com
+License: MIT
+Description: UNKNOWN
+Keywords: odrive,motor,motor control
+Platform: UNKNOWN
